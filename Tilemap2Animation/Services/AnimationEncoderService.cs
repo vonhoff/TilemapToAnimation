@@ -86,33 +86,6 @@ public class AnimationEncoderService : IAnimationEncoderService
                 // The newly added frame will be the last one in the collection.
                 image.Frames[image.Frames.Count - 1].Metadata.GetGifMetadata().FrameDelay = delayCentiseconds;
                 Log.Debug($"Set frame {i} delay to {delayCentiseconds} centiseconds");
-
-
-                // Set the delay (different property name depending on ImageSharp version)
-                // try
-                // {
-                //     // Try to set the frame delay using the current property name
-                //     var metadataType = metadata.GetType();
-                //     var delayProperty = metadataType.GetProperty("FrameDelay") ?? 
-                //                        metadataType.GetProperty("Delay");
-                //     
-                //     if (delayProperty != null)
-                //     {
-                //         delayProperty.SetValue(metadata, delayCentiseconds);
-                //         Log.Debug($"Set frame {i} delay to {delayCentiseconds} centiseconds");
-                //     }
-                //     else
-                //     {
-                //         Log.Warning("Unable to set frame delay - property not found");
-                //     }
-                // }
-                // catch (Exception ex)
-                // {
-                //     Log.Warning(ex, "Error setting frame delay");
-                // }
-                // 
-                // // Add the frame to the animation
-                // image.Frames.AddFrame(frameClone.Frames.RootFrame);
             }
             
             // Save the complete multi-frame gif

@@ -7,7 +7,7 @@ using Tilemap2Animation.Services.Contracts;
 
 namespace Tilemap2Animation.Workflows;
 
-public class Tilemap2AnimationWorkflow
+public class MainWorkflow
 {
     private readonly ITilemapFactory _tilemapFactory;
     private readonly ITilesetFactory _tilesetFactory;
@@ -17,7 +17,7 @@ public class Tilemap2AnimationWorkflow
     private readonly IAnimationGeneratorService _animationGeneratorService;
     private readonly IAnimationEncoderService _animationEncoderService;
 
-    public Tilemap2AnimationWorkflow(
+    public MainWorkflow(
         ITilemapFactory tilemapFactory,
         ITilesetFactory tilesetFactory,
         ITilemapService tilemapService,
@@ -35,7 +35,7 @@ public class Tilemap2AnimationWorkflow
         _animationEncoderService = animationEncoderService;
     }
 
-    public async Task ExecuteAsync(Tilemap2AnimationWorkflowOptions options)
+    public async Task ExecuteAsync(MainWorkflowOptions options)
     {
         try
         {

@@ -38,30 +38,31 @@ public class TilesetService : ITilesetService
             Log.Error(ex, $"Error deserializing TSX file: {tsxFilePath}");
             throw new InvalidOperationException($"Error deserializing TSX file: {ex.Message}", ex);
         }
-    }
-
-    public async Task<List<string>> FindTsxFilesReferencingImageAsync(string imageFilePath)
-    {
-        if (string.IsNullOrEmpty(imageFilePath))
-        {
-            throw new ArgumentException("Image file path cannot be null or empty.", nameof(imageFilePath));
-        }
-
-        try
-        {
-            string directory = Path.GetDirectoryName(imageFilePath) ?? ".";
-            string imageFileName = Path.GetFileName(imageFilePath);
-            var tsxFiles = new List<string>();
-
-            // Search for TSX files in the directory and its subdirectories
-            foreach (string tsxFile in Directory.GetFiles(directory, "*.tsx", SearchOption.AllDirectories))
-            {
-                try
-                {
-                    using var fileStream = new FileStream(tsxFile, FileMode.Open, FileAccess.Read);
-                    var serializer = new XmlSerializer(typeof(Tileset));
-                    var tileset = (Tileset)serializer.Deserialize(fileStream);
-
+                // Set the delay (different property name depending on ImageSharp version)
+                // try
+                // {
+                //     // Try to set the frame delay using the current property name
+                //     var metadataType = metadata.GetType();
+                //     var delayProperty = metadataType.GetProperty("FrameDelay") ?? 
+                //                        metadataType.GetProperty("Delay");
+                //     
+                //     if (delayProperty != null)
+                //     {
+                //         delayProperty.SetValue(metadata, delayCentiseconds);
+                //         Log.Debug($"Set frame {i} delay to {delayCentiseconds} centiseconds");
+                //     }
+                //     else
+                //     {
+                //         Log.Warning("Unable to set frame delay - property not found");
+                //     }
+                // }
+                // catch (Exception ex)
+                // {
+                //     Log.Warning(ex, "Error setting frame delay");
+                // }
+                // 
+                // // Add the frame to the animation
+                // image.Frames.AddFrame(frameClone.Frames.RootFrame);
                     // Check if the tileset references the image file
                     if (tileset.Image != null && !string.IsNullOrEmpty(tileset.Image.Path))
                     {

@@ -12,26 +12,21 @@ namespace Tilemap2Animation;
 
 public class Startup
 {
-    private readonly Tilemap2AnimationWorkflowOptions _workflowOptions;
+    private readonly MainWorkflowOptions _workflowOptions;
 
-    public Startup(Tilemap2AnimationWorkflowOptions workflowOptions)
+    public Startup(MainWorkflowOptions workflowOptions)
     {
         _workflowOptions = workflowOptions;
     }
 
-    public Tilemap2AnimationWorkflow BuildApplication()
+    public MainWorkflow BuildApplication()
     {
-        ConfigureLogging();
-        
-        // Configure services
         var services = new ServiceCollection();
+        ConfigureLogging();   
         ConfigureServices(services);
         
-        // Build service provider
         var serviceProvider = services.BuildServiceProvider();
-        
-        // Create workflow
-        return serviceProvider.GetRequiredService<Tilemap2AnimationWorkflow>();
+        return serviceProvider.GetRequiredService<MainWorkflow>();
     }
 
     private void ConfigureLogging()
@@ -45,18 +40,13 @@ public class Startup
 
     private void ConfigureServices(IServiceCollection services)
     {
-        // Register services
         services.AddTransient<ITilemapService, TilemapService>();
         services.AddTransient<ITilesetService, TilesetService>();
         services.AddTransient<ITilesetImageService, TilesetImageService>();
         services.AddTransient<IAnimationGeneratorService, AnimationGeneratorService>();
         services.AddTransient<IAnimationEncoderService, AnimationEncoderService>();
-        
-        // Register factories
         services.AddTransient<ITilemapFactory, TilemapFactory>();
         services.AddTransient<ITilesetFactory, TilesetFactory>();
-        
-        // Register workflow
-        services.AddTransient<Tilemap2AnimationWorkflow>();
+        services.AddTransient<MainWorkflow>();
     }
 } 

@@ -1,9 +1,14 @@
-namespace Tilemap2Animation.CommandLineOptions;
+namespace Tilemap2Animation.Workflows;
 
-public class Tilemap2AnimationOptions
+public class MainWorkflowOptions
 {
     public required string InputFile { get; init; }
+    
     public string? OutputFile { get; init; }
+    
     public string Format { get; init; } = "gif";
+    
     public int FrameDelay { get; init; } = 100;
+    
+    public bool Verbose { get; init; }
 } 
