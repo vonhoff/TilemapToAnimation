@@ -6,20 +6,6 @@ namespace Tilemap2Animation.Services.Contracts;
 
 public interface IAnimationGeneratorService
 {
-    Task<(List<Image<Rgba32>> Frames, List<int> Delays)> GenerateAnimationFramesAsync(
-        Tilemap tilemap,
-        Tileset tileset,
-        Image<Rgba32> tilesetImage,
-        List<uint> layerData,
-        int frameDelay);
-        
-    Task<(List<Image<Rgba32>> Frames, List<int> Delays)> GenerateAnimationFramesFromLayersAsync(
-        Tilemap tilemap,
-        Tileset tileset,
-        Image<Rgba32> tilesetImage,
-        Dictionary<string, List<uint>> layerDataByName,
-        int frameDelay);
-    
     Task<(List<Image<Rgba32>> Frames, List<int> Delays)> GenerateAnimationFramesFromMultipleTilesetsAsync(
         Tilemap tilemap,
         List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets,
