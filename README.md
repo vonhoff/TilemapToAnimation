@@ -1,7 +1,7 @@
 # Tilemap2Animation
 
 ![workflow](https://img.shields.io/github/actions/workflow/status/vonhoff/Tilemap2Animation/dotnet.yml)
-[![version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/vonhoff/TilemapToAnimation/releases)
+[![version](https://img.shields.io/badge/version-1.0.1-blue)](https://github.com/vonhoff/TilemapToAnimation/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) into an animated GIF, allowing you to
