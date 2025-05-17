@@ -41,21 +41,21 @@ jobs:
         run: dotnet test --configuration Release --no-build --verbosity normal
 
       - name: Publish
-        run: dotnet publish Animation2Tilemap/Animation2Tilemap.csproj --configuration Release --runtime ${{ matrix.platform }}-${{ matrix.arch }} --self-contained true -p:PublishSingleFile=true -p:UseAppHost=true -o ./publish
+        run: dotnet publish Tilemap2Animation/Tilemap2Animation.csproj --configuration Release --runtime ${{ matrix.platform }}-${{ matrix.arch }} --self-contained true -p:PublishSingleFile=true -p:UseAppHost=true -o ./publish
 
       - name: Create Release Package
         shell: bash
         run: |
           cd publish
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            7z a -tzip ../Animation2Tilemap_${{ github.event.release.tag_name }}_${{ matrix.platform }}_${{ matrix.arch }}.zip *
+            7z a -tzip ../Tilemap2Animation_${{ github.event.release.tag_name }}_${{ matrix.platform }}_${{ matrix.arch }}.zip *
           else
-            zip -r ../Animation2Tilemap_${{ github.event.release.tag_name }}_${{ matrix.platform }}_${{ matrix.arch }}.zip *
+            zip -r ../Tilemap2Animation_${{ github.event.release.tag_name }}_${{ matrix.platform }}_${{ matrix.arch }}.zip *
           fi
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         with:
-          files: Animation2Tilemap_${{ github.event.release.tag_name }}_${{ matrix.platform }}_${{ matrix.arch }}.zip
+          files: Tilemap2Animation_${{ github.event.release.tag_name }}_${{ matrix.platform }}_${{ matrix.arch }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
