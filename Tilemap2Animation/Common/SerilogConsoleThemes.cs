@@ -2,14 +2,8 @@ using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Tilemap2Animation.Common;
 
-/// <summary>
-/// Custom console themes for Serilog
-/// </summary>
 public static class SerilogConsoleThemes
 {
-    /// <summary>
-    /// Gets a custom literate theme for console output
-    /// </summary>
     public static SystemConsoleTheme CustomLiterate { get; } = new(
         new Dictionary<ConsoleThemeStyle, SystemConsoleThemeStyle>
         {

@@ -7,19 +7,11 @@ using Tilemap2Animation.Workflows;
 
 namespace Tilemap2Animation;
 
-/// <summary>
-/// Main program class
-/// </summary>
 internal static class Program
 {
     private const int ExitCodeError = 1;
     private const int ExitCodeSuccess = 0;
 
-    /// <summary>
-    /// Main entry point
-    /// </summary>
-    /// <param name="args">Command line arguments</param>
-    /// <returns>Exit code</returns>
     public static async Task<int> Main(string[] args)
     {
         try

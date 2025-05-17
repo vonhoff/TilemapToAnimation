@@ -10,29 +10,17 @@ using Tilemap2Animation.Workflows;
 
 namespace Tilemap2Animation;
 
-/// <summary>
-/// Handles application startup and configuration
-/// </summary>
 public class Startup
 {
     private readonly Tilemap2AnimationWorkflowOptions _workflowOptions;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Startup"/> class
-    /// </summary>
-    /// <param name="workflowOptions">The workflow options</param>
     public Startup(Tilemap2AnimationWorkflowOptions workflowOptions)
     {
         _workflowOptions = workflowOptions;
     }
 
-    /// <summary>
-    /// Builds the application
-    /// </summary>
-    /// <returns>The workflow instance</returns>
     public Tilemap2AnimationWorkflow BuildApplication()
     {
-        // Configure logging
         ConfigureLogging();
         
         // Configure services

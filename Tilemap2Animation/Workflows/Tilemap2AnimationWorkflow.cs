@@ -7,9 +7,6 @@ using Tilemap2Animation.Services.Contracts;
 
 namespace Tilemap2Animation.Workflows;
 
-/// <summary>
-/// Workflow for converting a Tiled tilemap to an animation
-/// </summary>
 public class Tilemap2AnimationWorkflow
 {
     private readonly ITilemapFactory _tilemapFactory;
@@ -20,16 +17,6 @@ public class Tilemap2AnimationWorkflow
     private readonly IAnimationGeneratorService _animationGeneratorService;
     private readonly IAnimationEncoderService _animationEncoderService;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Tilemap2AnimationWorkflow"/> class
-    /// </summary>
-    /// <param name="tilemapFactory">The tilemap factory</param>
-    /// <param name="tilesetFactory">The tileset factory</param>
-    /// <param name="tilemapService">The tilemap service</param>
-    /// <param name="tilesetService">The tileset service</param>
-    /// <param name="tilesetImageService">The tileset image service</param>
-    /// <param name="animationGeneratorService">The animation generator service</param>
-    /// <param name="animationEncoderService">The animation encoder service</param>
     public Tilemap2AnimationWorkflow(
         ITilemapFactory tilemapFactory,
         ITilesetFactory tilesetFactory,
@@ -48,10 +35,6 @@ public class Tilemap2AnimationWorkflow
         _animationEncoderService = animationEncoderService;
     }
 
-    /// <summary>
-    /// Executes the workflow
-    /// </summary>
-    /// <param name="options">The workflow options</param>
     public async Task ExecuteAsync(Tilemap2AnimationWorkflowOptions options)
     {
         try
