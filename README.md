@@ -54,6 +54,10 @@ For a full list of options, use:
 tilemap2animation --help
 ```
 
+## Related Projects
+
+For converting GIFs back to tilemaps, check out [Animation2Tilemap](https://github.com/vonhoff/Animation2Tilemap).
+
 ## Support and Contribute
 
 If you find value in this project, there are several ways you can contribute:
