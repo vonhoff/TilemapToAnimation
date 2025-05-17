@@ -4,7 +4,9 @@
 [![version](https://img.shields.io/badge/version-2.1.0-blue)](https://github.com/vonhoff/TilemapToAnimation/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) into an animated GIF, allowing you to transform tile-based designs from [Tiled](https://www.mapeditor.org/) and other game development tools into seamless animated GIFs.
+Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) into an animated GIF, allowing you to
+transform tile-based designs from [Tiled](https://www.mapeditor.org/) and other game development tools into seamless
+animated GIFs.
 
 ## Features
 
@@ -22,9 +24,9 @@ Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) int
 
 Convert a tileset and tilemap into a GIF animation:
 
-|      Input Tilemap      |         Output Animation          |
-|:-----------------------------:|:-------------------------------:|
-| ![Input](Resources/result.png) | ![Output](Resources/input.gif) |
+|                          From                          |                  To                   |
+|:------------------------------------------------------:|:-------------------------------------:|
+| ![Input](Resources/Screenshot%20from%202025-05-17.png) | ![Output](Resources/Sonic_md_fg1.gif) |
 
 Image source: https://x.com/jmw327/status/1405872936783802384
 
@@ -43,6 +45,7 @@ tilemap2animation -i <input file> -o <output GIF file>
 ```
 
 The input file can be:
+
 - A TMX tilemap file
 - A TSX tileset file
 - A tileset image file (the tool will try to find related TMX and TSX files)
@@ -63,7 +66,8 @@ It then parses the TMX and TSX files to extract the tilemap structure, layer dat
 
 The tileset image is loaded and processed, applying any necessary transparency settings.
 
-The tool analyzes the layer data and generates animation frames by compositing tiles from the tileset according to their positions in the tilemap.
+The tool analyzes the layer data and generates animation frames by compositing tiles from the tileset according to their
+positions in the tilemap.
 
 Finally, it encodes the generated frames into an animated GIF file with the specified frame delays.
 
