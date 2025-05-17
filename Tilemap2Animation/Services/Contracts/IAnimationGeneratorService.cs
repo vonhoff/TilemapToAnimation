@@ -20,5 +20,13 @@ public interface IAnimationGeneratorService
         Dictionary<string, List<uint>> layerDataByName,
         int frameDelay);
     
+    Task<(List<Image<Rgba32>> Frames, List<int> Delays)> GenerateAnimationFramesFromMultipleTilesetsAsync(
+        Tilemap tilemap,
+        List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets,
+        Dictionary<string, List<uint>> layerDataByName,
+        int frameDelay);
+    
     int CalculateTotalAnimationDuration(Tileset tileset, int frameDelay);
+    
+    int CalculateTotalAnimationDurationForMultipleTilesets(List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets, int frameDelay);
 } 

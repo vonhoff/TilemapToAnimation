@@ -1,15 +1,15 @@
-# TilemapToAnimation
+# Tilemap2Animation
 
 ![workflow](https://img.shields.io/github/actions/workflow/status/vonhoff/Tilemap2Animation/dotnet.yml)
 [![version](https://img.shields.io/badge/version-2.1.0-blue)](https://github.com/vonhoff/TilemapToAnimation/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-TilemapToAnimation is a command-line tool that converts a Tiled tilemap (TMX) into an animated GIF, allowing you to transform tile-based designs from [Tiled](https://www.mapeditor.org/) and other game development tools into seamless animated GIFs.
+Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) into an animated GIF, allowing you to transform tile-based designs from [Tiled](https://www.mapeditor.org/) and other game development tools into seamless animated GIFs.
 
 ## Features
 
 - **TMX to GIF Conversion** - Convert Tiled tilemaps directly into animated GIFs
-- **Smart File Resolution** - Automatically finds related TMX, TSX, and image files
+- **Automatic File Resolution** - Automatically finds related TMX, TSX, and image files
 - **Animation Generation** - Creates smooth animations from tilemap layers
 - **Frame Delay Control** - Customize animation timing for the perfect result
 

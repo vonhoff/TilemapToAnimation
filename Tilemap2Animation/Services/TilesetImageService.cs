@@ -126,6 +126,35 @@ public class TilesetImageService : ITilesetImageService
     {
         try
         {
+            // Ensure the source rectangle is within the bounds of the tileset image
+            if (sourceRect.X < 0 || sourceRect.Y < 0 ||
+                sourceRect.X + sourceRect.Width > tilesetImage.Width ||
+                sourceRect.Y + sourceRect.Height > tilesetImage.Height)
+            {
+                // Adjust the rectangle to fit within the image bounds
+                var adjustedRect = new Rectangle(
+                    Math.Max(0, sourceRect.X),
+                    Math.Max(0, sourceRect.Y),
+                    Math.Min(sourceRect.Width, tilesetImage.Width - Math.Max(0, sourceRect.X)),
+                    Math.Min(sourceRect.Height, tilesetImage.Height - Math.Max(0, sourceRect.Y))
+                );
+                
+                // Log.Verbose("Adjusted tile rectangle from {OriginalRect} to {AdjustedRect} to fit within tileset bounds",
+                //     sourceRect, adjustedRect);
+                    
+                // If the adjusted rectangle has zero width or height, create an empty tile
+                if (adjustedRect.Width <= 0 || adjustedRect.Height <= 0)
+                {
+                    // Log.Warning("Cannot extract tile: source rectangle {SourceRect} is outside image bounds {ImageSize}",
+                    //     sourceRect, new Size(tilesetImage.Width, tilesetImage.Height));
+                        
+                    // Return a transparent tile of the requested size
+                    return new Image<Rgba32>(sourceRect.Width, sourceRect.Height);
+                }
+                
+                sourceRect = adjustedRect;
+            }
+            
             // Clone the region of the tileset image for this tile
             return tilesetImage.Clone(ctx => ctx.Crop(sourceRect));
         }
