@@ -24,9 +24,9 @@ animated GIFs.
 
 Convert a tileset and tilemap into a GIF animation:
 
-|                          From                          |                         To                         |
-|:------------------------------------------------------:|:--------------------------------------------------:|
-| ![Input](Resources/Screenshot%20from%202025-05-17.png) | <img src="Resources/Sonic_md_fg1.gif" width="480"> |
+|                          From                          |                         To                          |
+|:------------------------------------------------------:|:---------------------------------------------------:|
+| ![Input](Resources/Screenshot%20from%202025-05-17.png) | <img src="Resources/Sonic_md_fg1.gif" width="1080"> |
 
 Image source: https://x.com/jmw327/status/1405872936783802384
 
