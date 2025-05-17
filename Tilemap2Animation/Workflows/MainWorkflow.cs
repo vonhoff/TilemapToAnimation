@@ -115,22 +115,17 @@ public class MainWorkflow
                 tilemap, tileset, tilesetImage, layerDataByName, options.FrameDelay);
             
             // Determine output file path
-            var outputFile = options.OutputFile ?? 
-                             Path.ChangeExtension(inputFile, options.Format.ToLowerInvariant());
+            var outputFile = options.OutputFile ?? Path.ChangeExtension(inputFile, ".gif");
+            
+            // Ensure the file extension is .gif
+            if (!outputFile.ToLowerInvariant().EndsWith(".gif"))
+            {
+                outputFile = Path.ChangeExtension(outputFile, ".gif");
+            }
             
             // Encode and save the animation
-            Log.Information("Encoding animation to {OptionsFormat} format: {OutputFile}", options.Format, outputFile);
-            switch (options.Format.ToLowerInvariant())
-            {
-                case "gif":
-                    await _animationEncoderService.SaveAsGifAsync(frames, delays, outputFile);
-                    break;
-                case "apng":
-                    await _animationEncoderService.SaveAsApngAsync(frames, delays, outputFile);
-                    break;
-                default:
-                    throw new ArgumentException($"Unsupported output format: {options.Format}");
-            }
+            Log.Information("Encoding animation to GIF format: {OutputFile}", outputFile);
+            await _animationEncoderService.SaveAsGifAsync(frames, delays, outputFile);
             
             Log.Information("Animation successfully saved to {OutputFile}", outputFile);
         }

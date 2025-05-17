@@ -45,9 +45,6 @@ public class AnimationEncoderService : IAnimationEncoderService
             
             Log.Information("Creating GIF with {FramesCount} frames...", frames.Count);
             
-            // Create a new image for the animation
-            // using var image = new Image<Rgba32>(Configuration.Default, frames[0].Width, frames[0].Height);
-            
             // Use the first frame as the base for the GIF.
             // Clone it to avoid modifying the original list's instance.
             using var image = frames[0].Clone(); 
@@ -71,10 +68,7 @@ public class AnimationEncoderService : IAnimationEncoderService
             {
                 // Clone the frame so we don't modify the original
                 using var frameClone = frames[i].Clone();
-                
-                // Each frame needs its own metadata for delay, but it's set on the frame AFTER adding it to the main image's frames.
-                // var metadata = frameClone.Metadata.GetGifMetadata();
-                
+
                 // ImageSharp uses centiseconds (1/100 of a second) for GIF delays
                 // Convert from milliseconds to centiseconds
                 var delayCentiseconds = delays[i] / 10;
@@ -97,131 +91,6 @@ public class AnimationEncoderService : IAnimationEncoderService
         {
             Log.Error(ex, "Error saving frames as GIF to {OutputPath}", outputPath);
             throw new InvalidOperationException($"Error saving frames as GIF: {ex.Message}", ex);
-        }
-    }
-
-    public async Task SaveAsApngAsync(List<Image<Rgba32>> frames, List<int> delays, string outputPath)
-    {
-        if (frames == null || frames.Count == 0)
-        {
-            throw new ArgumentException("No frames to encode.", nameof(frames));
-        }
-        
-        if (delays == null || delays.Count != frames.Count)
-        {
-            throw new ArgumentException("Delays must match the number of frames.", nameof(delays));
-        }
-        
-        try
-        {
-            // Ensure the output directory exists
-            var directory = Path.GetDirectoryName(outputPath);
-            if (!string.IsNullOrEmpty(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-            
-            // Create a temporary directory for frame images
-            var tempDir = Path.Combine(Path.GetTempPath(), "tilemap2animation_apng_" + Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(tempDir);
-            
-            try
-            {
-                // Save each frame as a PNG file
-                var frameFiles = new List<string>();
-                for (var i = 0; i < frames.Count; i++)
-                {
-                    var framePath = Path.Combine(tempDir, $"frame_{i:D4}.png");
-                    await frames[i].SaveAsPngAsync(framePath);
-                    frameFiles.Add(framePath);
-                }
-                
-                // Check if apngasm is available
-                var hasApngasm = CheckForApngasm();
-                if (!hasApngasm)
-                {
-                    Log.Warning("apngasm tool not found. Falling back to GIF format.");
-                    await SaveAsGifAsync(frames, delays, Path.ChangeExtension(outputPath, ".gif"));
-                    return;
-                }
-                
-                // Build apngasm command
-                var apngasmArgs = new StringBuilder();
-                for (var i = 0; i < frameFiles.Count; i++)
-                {
-                    if (i > 0) apngasmArgs.Append(' ');
-                    apngasmArgs.Append($"\"{frameFiles[i]}\" {delays[i] / 10} 1"); // Convert ms to centiseconds
-                }
-                apngasmArgs.Append($" -o \"{outputPath}\"");
-                
-                // Run apngasm
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "apngasm",
-                    Arguments = apngasmArgs.ToString(),
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                };
-                
-                using var process = new Process();
-                process.StartInfo = startInfo;
-                process.Start();
-                await process.WaitForExitAsync();
-                
-                if (process.ExitCode != 0)
-                {
-                    var error = await process.StandardError.ReadToEndAsync();
-                    throw new InvalidOperationException($"apngasm failed with exit code {process.ExitCode}: {error}");
-                }
-                
-                Log.Information("Successfully saved APNG to {OutputPath}", outputPath);
-            }
-            finally
-            {
-                // Clean up temporary files
-                try
-                {
-                    if (Directory.Exists(tempDir))
-                    {
-                        Directory.Delete(tempDir, true);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning(ex, "Error cleaning up temporary files");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Error saving frames as APNG to {OutputPath}", outputPath);
-            throw new InvalidOperationException($"Error saving frames as APNG: {ex.Message}", ex);
-        }
-    }
-
-    private bool CheckForApngasm()
-    {
-        try
-        {
-            using var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = "apngasm",
-                Arguments = "--version",
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            });
-
-            if (process == null) return false;
-            process.WaitForExit();
-            return process.ExitCode == 0;
-        }
-        catch
-        {
-            return false;
         }
     }
 } 

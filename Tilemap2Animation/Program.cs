@@ -11,7 +11,7 @@ public static class Program
 {
     private const string Description =
         """
-        Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) into an animated sequence (GIF/WEBP/APNG).
+        Tilemap2Animation is a command-line tool that converts a Tiled tilemap (TMX) into an animated GIF.
         See: https://github.com/vonhoff/Tilemap2Animation for more information.
         """;
 
@@ -48,7 +48,6 @@ public static class Program
     {
         var inputFileOption = new InputFileOption();
         var outputFileOption = new OutputFileOption();
-        var formatOption = new FormatOption();
         var frameDelayOption = new FrameDelayOption();
         var verboseOption = new VerboseOption();
 
@@ -56,7 +55,6 @@ public static class Program
             rootCommand,
             inputFileOption,
             outputFileOption,
-            formatOption,
             frameDelayOption,
             verboseOption);
     }
