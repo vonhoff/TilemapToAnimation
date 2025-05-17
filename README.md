@@ -54,21 +54,6 @@ For a full list of options, use:
 tilemap2animation --help
 ```
 
-## How It Works
-
-The tool processes Tiled map files through several specialized services:
-
-The tool first determines the type of input file and resolves any missing related files (TMX, TSX, and tileset image).
-
-It then parses the TMX and TSX files to extract the tilemap structure, layer data, and tileset information.
-
-The tileset image is loaded and processed, applying any necessary transparency settings.
-
-The tool analyzes the layer data and generates animation frames by compositing tiles from the tileset according to their
-positions in the tilemap.
-
-Finally, it encodes the generated frames into an animated GIF file with the specified frame delays.
-
 ## Support and Contribute
 
 If you find value in this project, there are several ways you can contribute:
