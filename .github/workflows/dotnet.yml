@@ -26,23 +26,44 @@ jobs:
         run: dotnet build --no-restore
 
       - name: Test with coverage
-        run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
+        run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+        
+      - name: Debug - Find coverage files
+        run: |
+          echo "Searching for coverage files..."
+          find . -name "*.cobertura.xml" || echo "No cobertura.xml files found"
+          find ./TestResults -type f -name "*" || echo "No files in TestResults directory"
+          ls -la ./TestResults || echo "TestResults directory not found"
 
       - name: Install ReportGenerator
         run: dotnet tool install -g dotnet-reportgenerator-globaltool
 
       - name: Generate coverage report
-        run: reportgenerator -reports:**/TestResults/*/coverage.cobertura.xml -targetdir:./CodeCoverage -reporttypes:Html
+        run: |
+          # Try to find coverage files with a more generic pattern
+          COVERAGE_FILES=$(find ./TestResults -name "*.cobertura.xml")
+          if [ -n "$COVERAGE_FILES" ]; then
+            echo "Found coverage files: $COVERAGE_FILES"
+            reportgenerator -reports:"$COVERAGE_FILES" -targetdir:./CodeCoverage -reporttypes:Html
+          else
+            echo "No coverage files found, trying with common patterns..."
+            reportgenerator -reports:./TestResults/**/*.cobertura.xml -targetdir:./CodeCoverage -reporttypes:Html
+          fi
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage-report
           path: ./CodeCoverage
+          if-no-files-found: warn
           
       - name: Coverage check
         run: |
-          REPORT=$(find . -type f -path "*/TestResults/*/coverage.cobertura.xml" | head -n1)
+          REPORT=$(find . -type f -name "*.cobertura.xml" | head -n1)
+          if [ -z "$REPORT" ]; then
+            echo "No coverage report found. Ensure tests are properly configured."
+            exit 1
+          fi
           echo "Using coverage report at $REPORT"
           TOTAL_COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' "$REPORT" | head -n1)
           TOTAL_COVERAGE_PERCENT=$(echo "$TOTAL_COVERAGE * 100" | bc)
