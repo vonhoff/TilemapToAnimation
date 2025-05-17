@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Text;
 using System.Xml.Serialization;
 using Serilog;
 using Tilemap2Animation.Entities;
@@ -18,9 +17,9 @@ public class TilemapService : ITilemapService
 
         try
         {
-            using var fileStream = new FileStream(tmxFilePath, FileMode.Open, FileAccess.Read);
+            await using var fileStream = new FileStream(tmxFilePath, FileMode.Open, FileAccess.Read);
             var serializer = new XmlSerializer(typeof(Tilemap));
-            var tilemap = (Tilemap)await Task.Run(() => serializer.Deserialize(fileStream));
+            var tilemap = await Task.Run(() => (Tilemap?)serializer.Deserialize(fileStream));
             
             if (tilemap == null)
             {
@@ -31,12 +30,12 @@ public class TilemapService : ITilemapService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error deserializing TMX file: {tmxFilePath}");
+            Log.Error(ex, "Error deserializing TMX file: {TmxFilePath}", tmxFilePath);
             throw new InvalidOperationException($"Error deserializing TMX file: {ex.Message}", ex);
         }
     }
 
-    public List<uint> ParseLayerData(TilemapLayer layer)
+    public List<uint> ParseLayerData(TilemapLayer? layer)
     {
         if (layer?.Data == null || string.IsNullOrEmpty(layer.Data.Text))
         {
@@ -45,8 +44,8 @@ public class TilemapService : ITilemapService
 
         try
         {
-            string encoding = layer.Data.Encoding ?? "csv";
-            string compression = layer.Data.Compression ?? "";
+            var encoding = layer.Data.Encoding ?? "csv";
+            var compression = layer.Data.Compression ?? "";
             
             switch (encoding.ToLowerInvariant())
             {
@@ -74,31 +73,35 @@ public class TilemapService : ITilemapService
 
         try
         {
-            string directory = Path.GetDirectoryName(tsxFilePath) ?? ".";
-            string tsxFileName = Path.GetFileName(tsxFilePath);
+            var directory = Path.GetDirectoryName(tsxFilePath) ?? ".";
+            var tsxFileName = Path.GetFileName(tsxFilePath);
             var tmxFiles = new List<string>();
 
             // Search for TMX files in the directory and its subdirectories
-            foreach (string tmxFile in Directory.GetFiles(directory, "*.tmx", SearchOption.AllDirectories))
+            var tmxFilesInDirectory = await Task.Run(() => Directory.GetFiles(directory, "*.tmx", SearchOption.AllDirectories));
+            
+            foreach (var tmxFile in tmxFilesInDirectory)
             {
                 try
                 {
-                    using var fileStream = new FileStream(tmxFile, FileMode.Open, FileAccess.Read);
+                    await using var fileStream = new FileStream(tmxFile, FileMode.Open, FileAccess.Read);
                     var serializer = new XmlSerializer(typeof(Tilemap));
-                    var tilemap = (Tilemap)serializer.Deserialize(fileStream);
+                    var tilemap = await Task.Run(() => (Tilemap?)serializer.Deserialize(fileStream));
 
-                    // Check if any tileset in the TMX references the TSX file
-                    if (tilemap.Tilesets.Any(t => t.Source != null && 
-                        Path.GetFileName(t.Source).Equals(tsxFileName, StringComparison.OrdinalIgnoreCase)))
+                    if (tilemap?.Tilesets != null)
                     {
-                        tmxFiles.Add(tmxFile);
+                        // Check if any tileset in the TMX references the TSX file
+                        if (tilemap.Tilesets.Any(t => t.Source != null && 
+                            Path.GetFileName(t.Source).Equals(tsxFileName, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            tmxFiles.Add(tmxFile);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, $"Error reading TMX file: {tmxFile}");
+                    Log.Warning(ex, "Error reading TMX file: {TmxFile}", tmxFile);
                     // Continue with the next file
-                    continue;
                 }
             }
 
@@ -106,7 +109,7 @@ public class TilemapService : ITilemapService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error searching for TMX files referencing TSX: {tsxFilePath}");
+            Log.Error(ex, "Error searching for TMX files referencing TSX: {TsxFilePath}", tsxFilePath);
             throw new InvalidOperationException($"Error searching for TMX files: {ex.Message}", ex);
         }
     }
@@ -116,11 +119,11 @@ public class TilemapService : ITilemapService
         var result = new List<uint>();
         
         // Remove whitespace and split by commas
-        string[] values = data.Replace("\n", "").Replace("\r", "").Replace(" ", "").Split(',');
+        var values = data.Replace("\n", "").Replace("\r", "").Replace(" ", "").Split(',');
         
         foreach (var value in values)
         {
-            if (!string.IsNullOrEmpty(value) && uint.TryParse(value, out uint gid))
+            if (!string.IsNullOrEmpty(value) && uint.TryParse(value, out var gid))
             {
                 result.Add(gid);
             }
@@ -137,7 +140,7 @@ public class TilemapService : ITilemapService
         data = data.Replace("\n", "").Replace("\r", "").Replace(" ", "");
         
         // Decode base64
-        byte[] bytes = Convert.FromBase64String(data);
+        var bytes = Convert.FromBase64String(data);
         
         // Decompress if needed
         bytes = compression.ToLowerInvariant() switch
@@ -149,9 +152,9 @@ public class TilemapService : ITilemapService
         };
         
         // Parse GIDs (each GID is a 32-bit unsigned integer in little-endian format)
-        for (int i = 0; i < bytes.Length; i += 4)
+        for (var i = 0; i < bytes.Length; i += 4)
         {
-            uint gid = BitConverter.ToUInt32(bytes, i);
+            var gid = BitConverter.ToUInt32(bytes, i);
             result.Add(gid);
         }
         

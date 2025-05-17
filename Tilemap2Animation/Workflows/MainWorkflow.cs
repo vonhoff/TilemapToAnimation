@@ -1,16 +1,10 @@
 using Serilog;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using Tilemap2Animation.Entities;
-using Tilemap2Animation.Factories.Contracts;
 using Tilemap2Animation.Services.Contracts;
 
 namespace Tilemap2Animation.Workflows;
 
 public class MainWorkflow
 {
-    private readonly ITilemapFactory _tilemapFactory;
-    private readonly ITilesetFactory _tilesetFactory;
     private readonly ITilemapService _tilemapService;
     private readonly ITilesetService _tilesetService;
     private readonly ITilesetImageService _tilesetImageService;
@@ -18,16 +12,12 @@ public class MainWorkflow
     private readonly IAnimationEncoderService _animationEncoderService;
 
     public MainWorkflow(
-        ITilemapFactory tilemapFactory,
-        ITilesetFactory tilesetFactory,
         ITilemapService tilemapService,
         ITilesetService tilesetService,
         ITilesetImageService tilesetImageService,
         IAnimationGeneratorService animationGeneratorService,
         IAnimationEncoderService animationEncoderService)
     {
-        _tilemapFactory = tilemapFactory;
-        _tilesetFactory = tilesetFactory;
         _tilemapService = tilemapService;
         _tilesetService = tilesetService;
         _tilesetImageService = tilesetImageService;
@@ -42,8 +32,8 @@ public class MainWorkflow
             Log.Information("Starting Tilemap2Animation conversion...");
             
             // First, determine the type of input file
-            string inputFile = Path.GetFullPath(options.InputFile);
-            string extension = Path.GetExtension(inputFile).ToLowerInvariant();
+            var inputFile = Path.GetFullPath(options.InputFile);
+            var extension = Path.GetExtension(inputFile).ToLowerInvariant();
             
             string? tmxFile = null;
             string? tsxFile = null;
@@ -89,15 +79,15 @@ public class MainWorkflow
             }
             
             // Parse the TMX file
-            Log.Information($"Parsing TMX file: {tmxFile}");
-            var tilemap = await _tilemapFactory.CreateFromTmxFileAsync(tmxFile);
+            Log.Information("Parsing TMX file: {TmxFile}", tmxFile);
+            var tilemap = await _tilemapService.DeserializeTmxAsync(tmxFile);
             
             // Parse the TSX file
-            Log.Information($"Parsing TSX file: {tsxFile}");
-            var tileset = await _tilesetFactory.CreateFromTsxFileAsync(tsxFile);
+            Log.Information("Parsing TSX file: {TsxFile}", tsxFile);
+            var tileset = await _tilesetService.DeserializeTsxAsync(tsxFile);
             
             // Load the tileset image
-            Log.Information($"Loading tileset image: {imageFile}");
+            Log.Information("Loading tileset image: {ImageFile}", imageFile);
             var tilesetImage = await _tilesetImageService.LoadTilesetImageAsync(imageFile);
             
             // Apply transparency processing if needed
@@ -114,7 +104,7 @@ public class MainWorkflow
             var layerDataByName = new Dictionary<string, List<uint>>();
             foreach (var layer in tilemap.Layers)
             {
-                Log.Information($"Parsing layer data: {layer.Name}");
+                Log.Information("Parsing layer data: {LayerName}", layer.Name);
                 var layerData = _tilemapService.ParseLayerData(layer);
                 layerDataByName[layer.Name ?? ""] = layerData;
             }
@@ -125,11 +115,11 @@ public class MainWorkflow
                 tilemap, tileset, tilesetImage, layerDataByName, options.FrameDelay);
             
             // Determine output file path
-            string outputFile = options.OutputFile ?? 
-                Path.ChangeExtension(inputFile, options.Format.ToLowerInvariant());
+            var outputFile = options.OutputFile ?? 
+                             Path.ChangeExtension(inputFile, options.Format.ToLowerInvariant());
             
             // Encode and save the animation
-            Log.Information($"Encoding animation to {options.Format} format: {outputFile}");
+            Log.Information("Encoding animation to {OptionsFormat} format: {OutputFile}", options.Format, outputFile);
             switch (options.Format.ToLowerInvariant())
             {
                 case "gif":
@@ -142,7 +132,7 @@ public class MainWorkflow
                     throw new ArgumentException($"Unsupported output format: {options.Format}");
             }
             
-            Log.Information($"Animation successfully saved to {outputFile}");
+            Log.Information("Animation successfully saved to {OutputFile}", outputFile);
         }
         catch (Exception ex)
         {
@@ -156,9 +146,9 @@ public class MainWorkflow
         string? initialTsxFile,
         string? initialImageFile)
     {
-        string? tmxFile = initialTmxFile;
-        string? tsxFile = initialTsxFile;
-        string? imageFile = initialImageFile;
+        var tmxFile = initialTmxFile;
+        var tsxFile = initialTsxFile;
+        var imageFile = initialImageFile;
 
         // If we have a TMX file, we can get the TSX from it
         if (tmxFile != null && tsxFile == null)

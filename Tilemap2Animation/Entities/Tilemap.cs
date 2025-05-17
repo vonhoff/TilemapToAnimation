@@ -1,5 +1,4 @@
 ﻿using System.Xml.Serialization;
-using SixLabors.ImageSharp;
 
 namespace Tilemap2Animation.Entities;
 

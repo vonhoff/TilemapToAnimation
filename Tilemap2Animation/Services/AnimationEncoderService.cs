@@ -12,7 +12,7 @@ public class AnimationEncoderService : IAnimationEncoderService
 {
     public async Task SaveAsGifAsync(List<Image<Rgba32>> frames, List<int> delays, string outputPath)
     {
-        if (frames == null || !frames.Any())
+        if (frames == null || frames.Count == 0)
         {
             throw new ArgumentException("No frames to encode.", nameof(frames));
         }
@@ -25,7 +25,7 @@ public class AnimationEncoderService : IAnimationEncoderService
         try
         {
             // Ensure the output directory exists
-            string? directory = Path.GetDirectoryName(outputPath);
+            var directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -43,7 +43,7 @@ public class AnimationEncoderService : IAnimationEncoderService
                 ColorTableMode = GifColorTableMode.Local
             };
             
-            Log.Information($"Creating GIF with {frames.Count} frames...");
+            Log.Information("Creating GIF with {FramesCount} frames...", frames.Count);
             
             // Create a new image for the animation
             // using var image = new Image<Rgba32>(Configuration.Default, frames[0].Width, frames[0].Height);
@@ -61,13 +61,13 @@ public class AnimationEncoderService : IAnimationEncoderService
             // Convert from milliseconds to centiseconds
             if (frames.Count > 0 && delays.Count > 0)
             {
-                int firstFrameDelayCentiseconds = delays[0] / 10;
+                var firstFrameDelayCentiseconds = delays[0] / 10;
                 image.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = firstFrameDelayCentiseconds;
-                Log.Debug($"Set frame 0 delay to {firstFrameDelayCentiseconds} centiseconds");
+                Log.Debug("Set frame 0 delay to {FirstFrameDelayCentiseconds} centiseconds", firstFrameDelayCentiseconds);
             }
             
             // Add subsequent frames (from the second frame onwards)
-            for (int i = 1; i < frames.Count; i++)
+            for (var i = 1; i < frames.Count; i++)
             {
                 // Clone the frame so we don't modify the original
                 using var frameClone = frames[i].Clone();
@@ -77,7 +77,7 @@ public class AnimationEncoderService : IAnimationEncoderService
                 
                 // ImageSharp uses centiseconds (1/100 of a second) for GIF delays
                 // Convert from milliseconds to centiseconds
-                int delayCentiseconds = delays[i] / 10;
+                var delayCentiseconds = delays[i] / 10;
                 
                 // Add the frame to the animation first
                 image.Frames.AddFrame(frameClone.Frames.RootFrame);
@@ -85,24 +85,24 @@ public class AnimationEncoderService : IAnimationEncoderService
                 // Then set its delay on the metadata of the frame within the 'image'
                 // The newly added frame will be the last one in the collection.
                 image.Frames[image.Frames.Count - 1].Metadata.GetGifMetadata().FrameDelay = delayCentiseconds;
-                Log.Debug($"Set frame {i} delay to {delayCentiseconds} centiseconds");
+                Log.Debug("Set frame {I} delay to {DelayCentiseconds} centiseconds", i, delayCentiseconds);
             }
             
             // Save the complete multi-frame gif
             await image.SaveAsGifAsync(outputPath, gifEncoder);
             
-            Log.Information($"Successfully saved GIF to {outputPath}");
+            Log.Information("Successfully saved GIF to {OutputPath}", outputPath);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error saving frames as GIF to {outputPath}");
+            Log.Error(ex, "Error saving frames as GIF to {OutputPath}", outputPath);
             throw new InvalidOperationException($"Error saving frames as GIF: {ex.Message}", ex);
         }
     }
 
     public async Task SaveAsApngAsync(List<Image<Rgba32>> frames, List<int> delays, string outputPath)
     {
-        if (frames == null || !frames.Any())
+        if (frames == null || frames.Count == 0)
         {
             throw new ArgumentException("No frames to encode.", nameof(frames));
         }
@@ -115,29 +115,29 @@ public class AnimationEncoderService : IAnimationEncoderService
         try
         {
             // Ensure the output directory exists
-            string? directory = Path.GetDirectoryName(outputPath);
+            var directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory))
             {
                 Directory.CreateDirectory(directory);
             }
             
             // Create a temporary directory for frame images
-            string tempDir = Path.Combine(Path.GetTempPath(), "tilemap2animation_apng_" + Guid.NewGuid().ToString("N"));
+            var tempDir = Path.Combine(Path.GetTempPath(), "tilemap2animation_apng_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(tempDir);
             
             try
             {
                 // Save each frame as a PNG file
                 var frameFiles = new List<string>();
-                for (int i = 0; i < frames.Count; i++)
+                for (var i = 0; i < frames.Count; i++)
                 {
-                    string framePath = Path.Combine(tempDir, $"frame_{i:D4}.png");
+                    var framePath = Path.Combine(tempDir, $"frame_{i:D4}.png");
                     await frames[i].SaveAsPngAsync(framePath);
                     frameFiles.Add(framePath);
                 }
                 
                 // Check if apngasm is available
-                bool hasApngasm = CheckForApngasm();
+                var hasApngasm = CheckForApngasm();
                 if (!hasApngasm)
                 {
                     Log.Warning("apngasm tool not found. Falling back to GIF format.");
@@ -147,7 +147,7 @@ public class AnimationEncoderService : IAnimationEncoderService
                 
                 // Build apngasm command
                 var apngasmArgs = new StringBuilder();
-                for (int i = 0; i < frameFiles.Count; i++)
+                for (var i = 0; i < frameFiles.Count; i++)
                 {
                     if (i > 0) apngasmArgs.Append(' ');
                     apngasmArgs.Append($"\"{frameFiles[i]}\" {delays[i] / 10} 1"); // Convert ms to centiseconds
@@ -165,17 +165,18 @@ public class AnimationEncoderService : IAnimationEncoderService
                     CreateNoWindow = true
                 };
                 
-                using var process = new Process { StartInfo = startInfo };
+                using var process = new Process();
+                process.StartInfo = startInfo;
                 process.Start();
                 await process.WaitForExitAsync();
                 
                 if (process.ExitCode != 0)
                 {
-                    string error = await process.StandardError.ReadToEndAsync();
+                    var error = await process.StandardError.ReadToEndAsync();
                     throw new InvalidOperationException($"apngasm failed with exit code {process.ExitCode}: {error}");
                 }
                 
-                Log.Information($"Successfully saved APNG to {outputPath}");
+                Log.Information("Successfully saved APNG to {OutputPath}", outputPath);
             }
             finally
             {
@@ -195,7 +196,7 @@ public class AnimationEncoderService : IAnimationEncoderService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error saving frames as APNG to {outputPath}");
+            Log.Error(ex, "Error saving frames as APNG to {OutputPath}", outputPath);
             throw new InvalidOperationException($"Error saving frames as APNG: {ex.Message}", ex);
         }
     }

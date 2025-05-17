@@ -9,7 +9,4 @@ public class TilesetTile
 
     [XmlElement("animation")]
     public TilesetTileAnimation? Animation { get; set; }
-
-    [XmlIgnore]
-    public TilesetTileImage Image { get; init; }
 }

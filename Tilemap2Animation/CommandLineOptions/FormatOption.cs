@@ -11,7 +11,7 @@ public class FormatOption : ICommandLineOption<string>
     {
         Option = new Option<string>(
             name: "--format",
-            description: "The output format: 'gif' or 'apng'. Defaults to 'gif'.")
+            description: "The output format: 'gif', 'webp' or 'apng'. Defaults to 'gif'.")
         {
             IsRequired = false
         };

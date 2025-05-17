@@ -22,20 +22,20 @@ public class TilesetImageService : ITilesetImageService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error loading tileset image: {imageFilePath}");
+            Log.Error(ex, "Error loading tileset image: {ImageFilePath}", imageFilePath);
             throw new InvalidOperationException($"Error loading tileset image: {ex.Message}", ex);
         }
     }
     
     public Image<Rgba32> ProcessTransparency(Image<Rgba32> tilesetImage, Tileset tileset)
     {
-        if (tilesetImage == null) throw new ArgumentNullException(nameof(tilesetImage));
-        if (tileset == null) throw new ArgumentNullException(nameof(tileset));
-        
+        ArgumentNullException.ThrowIfNull(tilesetImage);
+        ArgumentNullException.ThrowIfNull(tileset);
+
         try
         {
             // Check if the tileset has a transparency color specified
-            string? transColorHex = tileset.Image?.Trans;
+            var transColorHex = tileset.Image?.Trans;
             if (string.IsNullOrEmpty(transColorHex))
             {
                 // No transparency color specified, return the original image
@@ -45,11 +45,11 @@ public class TilesetImageService : ITilesetImageService
             // Parse the hexadecimal color (format: "FF00FF" for magenta)
             if (!TryParseHexColor(transColorHex, out var transColor))
             {
-                Log.Warning($"Failed to parse transparency color: {transColorHex}");
+                Log.Warning("Failed to parse transparency color: {TransColorHex}", transColorHex);
                 return tilesetImage;
             }
             
-            Log.Debug($"Processing transparency for tileset: {tileset.Name}, color: #{transColorHex}");
+            Log.Debug("Processing transparency for tileset: {TilesetName}, color: #{TransColorHex}", tileset.Name, transColorHex);
             
             // Create a copy of the image to work with
             var processedImage = tilesetImage.Clone();
@@ -57,12 +57,12 @@ public class TilesetImageService : ITilesetImageService
             // Iterate through each pixel and make the transparency color fully transparent
             processedImage.ProcessPixelRows(accessor =>
             {
-                for (int y = 0; y < accessor.Height; y++)
+                for (var y = 0; y < accessor.Height; y++)
                 {
                     var pixelRow = accessor.GetRowSpan(y);
-                    for (int x = 0; x < pixelRow.Length; x++)
+                    for (var x = 0; x < pixelRow.Length; x++)
                     {
-                        ref Rgba32 pixel = ref pixelRow[x];
+                        ref var pixel = ref pixelRow[x];
                         
                         // Check if this pixel matches the transparent color (ignoring alpha)
                         if (pixel.R == transColor.R && pixel.G == transColor.G && pixel.B == transColor.B)
@@ -102,7 +102,8 @@ public class TilesetImageService : ITilesetImageService
                 color = new Rgba32(r, g, b, 255); // Full alpha
                 return true;
             }
-            else if (hex.Length == 8)
+
+            if (hex.Length == 8)
             {
                 // Format: AARRGGBB
                 var a = Convert.ToByte(hex.Substring(0, 2), 16);
@@ -112,7 +113,7 @@ public class TilesetImageService : ITilesetImageService
                 color = new Rgba32(r, g, b, a);
                 return true;
             }
-            
+
             return false;
         }
         catch
@@ -130,17 +131,14 @@ public class TilesetImageService : ITilesetImageService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, $"Error extracting tile from tileset image at {sourceRect}");
+            Log.Error(ex, "Error extracting tile from tileset image at {SourceRect}", sourceRect);
             throw new InvalidOperationException($"Error extracting tile from tileset image: {ex.Message}", ex);
         }
     }
 
     public Image<Rgba32> ApplyTileTransformations(Image<Rgba32> tileImage, bool flippedHorizontally, bool flippedVertically, bool flippedDiagonally)
     {
-        if (tileImage == null)
-        {
-            throw new ArgumentNullException(nameof(tileImage));
-        }
+        ArgumentNullException.ThrowIfNull(tileImage);
 
         try
         {
@@ -160,9 +158,7 @@ public class TilesetImageService : ITilesetImageService
                     .Flip(FlipMode.Horizontal));
 
                 // After diagonal flip, we need to swap horizontal and vertical flags
-                var temp = flippedHorizontally;
-                flippedHorizontally = flippedVertically;
-                flippedVertically = temp;
+                (flippedHorizontally, flippedVertically) = (flippedVertically, flippedHorizontally);
             }
 
             if (flippedHorizontally)

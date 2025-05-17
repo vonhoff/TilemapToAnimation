@@ -14,10 +14,10 @@ public class AnimationGeneratorService : IAnimationGeneratorService
     private readonly ITilemapService _tilemapService;
     
     // GID bit flags for flipping/rotation in Tiled
-    private const uint FLIPPED_HORIZONTALLY_FLAG = 0x80000000;
-    private const uint FLIPPED_VERTICALLY_FLAG = 0x40000000;
-    private const uint FLIPPED_DIAGONALLY_FLAG = 0x20000000;
-    private const uint TILE_ID_MASK = ~(FLIPPED_HORIZONTALLY_FLAG | FLIPPED_VERTICALLY_FLAG | FLIPPED_DIAGONALLY_FLAG);
+    private const uint FlippedHorizontallyFlag = 0x80000000;
+    private const uint FlippedVerticallyFlag = 0x40000000;
+    private const uint FlippedDiagonallyFlag = 0x20000000;
+    private const uint TileIdMask = ~(FlippedHorizontallyFlag | FlippedVerticallyFlag | FlippedDiagonallyFlag);
     
     public AnimationGeneratorService(ITilesetImageService tilesetImageService, ITilemapService tilemapService)
     {
@@ -29,12 +29,12 @@ public class AnimationGeneratorService : IAnimationGeneratorService
         Tilemap tilemap,
         Tileset tileset,
         Image<Rgba32> tilesetImage,
-        List<uint> layerData,
+        List<uint>? layerData,
         int frameDelay)
     {
-        if (tilemap == null) throw new ArgumentNullException(nameof(tilemap));
-        if (tileset == null) throw new ArgumentNullException(nameof(tileset));
-        if (tilesetImage == null) throw new ArgumentNullException(nameof(tilesetImage));
+        ArgumentNullException.ThrowIfNull(tilemap);
+        ArgumentNullException.ThrowIfNull(tileset);
+        ArgumentNullException.ThrowIfNull(tilesetImage);
         if (frameDelay <= 0) throw new ArgumentException("Frame delay must be greater than 0.", nameof(frameDelay));
         
         // Convert from deprecated single layer to multi-layer processing
@@ -53,16 +53,16 @@ public class AnimationGeneratorService : IAnimationGeneratorService
         Dictionary<string, List<uint>> layerDataByName,
         int frameDelay)
     {
-        if (tilemap == null) throw new ArgumentNullException(nameof(tilemap));
-        if (tileset == null) throw new ArgumentNullException(nameof(tileset));
-        if (tilesetImage == null) throw new ArgumentNullException(nameof(tilesetImage));
-        if (layerDataByName == null) throw new ArgumentNullException(nameof(layerDataByName));
+        ArgumentNullException.ThrowIfNull(tilemap);
+        ArgumentNullException.ThrowIfNull(tileset);
+        ArgumentNullException.ThrowIfNull(tilesetImage);
+        ArgumentNullException.ThrowIfNull(layerDataByName);
         if (frameDelay <= 0) throw new ArgumentException("Frame delay must be greater than 0.", nameof(frameDelay));
         
         try
         {
             // Calculate total animation duration
-            int totalDuration = CalculateTotalAnimationDuration(tileset, frameDelay);
+            var totalDuration = CalculateTotalAnimationDuration(tileset, frameDelay);
             
             // Create a list to store all frames
             var frames = new List<Image<Rgba32>>();
@@ -70,7 +70,7 @@ public class AnimationGeneratorService : IAnimationGeneratorService
             
             // Create frames for each time step, starting from the first frameDelay
             // to effectively skip generating the t=0 frame.
-            for (int time = 0; time < totalDuration; time += frameDelay)
+            for (var time = 0; time < totalDuration; time += frameDelay)
             {
                 // Create a new frame
                 var frame = new Image<Rgba32>(tilemap.Width * tilemap.TileWidth, tilemap.Height * tilemap.TileHeight);
@@ -82,11 +82,11 @@ public class AnimationGeneratorService : IAnimationGeneratorService
                     {
                         var bgColor = Rgba32.ParseHex(tilemap.BackgroundColor);
                         frame.Mutate(ctx => ctx.Fill(bgColor));
-                        Log.Debug($"Applied background color: {tilemap.BackgroundColor}");
+                        Log.Debug("Applied background color: {TilemapBackgroundColor}", tilemap.BackgroundColor);
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, $"Failed to parse background color: {tilemap.BackgroundColor}");
+                        Log.Warning(ex, "Failed to parse background color: {TilemapBackgroundColor}", tilemap.BackgroundColor);
                     }
                 }
                 
@@ -121,29 +121,23 @@ public class AnimationGeneratorService : IAnimationGeneratorService
 
     public int CalculateTotalAnimationDuration(Tileset tileset, int frameDelay)
     {
-        if (tileset == null) throw new ArgumentNullException(nameof(tileset));
+        ArgumentNullException.ThrowIfNull(tileset);
         if (frameDelay <= 0) throw new ArgumentException("Frame delay must be greater than 0.", nameof(frameDelay));
         
         try
         {
             // Find all animated tiles
-            var animatedTiles = tileset.Tiles?.Where(t => t.Animation?.Frames != null && t.Animation.Frames.Any()) ?? Enumerable.Empty<TilesetTile>();
-            
-            if (!animatedTiles.Any())
+            var animatedTiles = tileset.Tiles?.Where(t => t.Animation?.Frames != null && t.Animation.Frames.Count != 0) ?? Enumerable.Empty<TilesetTile>();
+
+            var tilesetTiles = animatedTiles.ToList();
+            if (tilesetTiles.Count == 0)
             {
                 // If no animated tiles, return frame delay as total duration
                 return frameDelay;
             }
             
             // Calculate the least common multiple of all animation durations
-            int totalDuration = frameDelay;
-            foreach (var tile in animatedTiles)
-            {
-                int animationDuration = tile.Animation!.Frames.Sum(f => f.Duration);
-                totalDuration = LeastCommonMultiple(totalDuration, animationDuration);
-            }
-            
-            return totalDuration;
+            return tilesetTiles.Select(tile => tile.Animation!.Frames.Sum(f => f.Duration)).Aggregate(frameDelay, LeastCommonMultiple);
         }
         catch (Exception ex)
         {
@@ -155,13 +149,13 @@ public class AnimationGeneratorService : IAnimationGeneratorService
     private async Task DrawTilesOnFrameAsync(Image<Rgba32> frame, Tilemap tilemap, Tileset tileset, Image<Rgba32> tilesetImage, List<uint> layerData, int currentTime)
     {
         // Reference to the first tileset GID
-        uint firstGid = (uint)tilemap.Tilesets.First().FirstGid;
+        var firstGid = (uint)tilemap.Tilesets.First().FirstGid;
         
         // Process each tile in the layer
-        for (int tileIndex = 0; tileIndex < layerData.Count; tileIndex++)
+        for (var tileIndex = 0; tileIndex < layerData.Count; tileIndex++)
         {
             // Get the GID for this tile
-            uint gid = layerData[tileIndex];
+            var gid = layerData[tileIndex];
             
             // Skip empty tiles (GID 0)
             if (gid == 0)
@@ -170,32 +164,32 @@ public class AnimationGeneratorService : IAnimationGeneratorService
             }
             
             // Calculate tile position in the map
-            int mapX = tileIndex % tilemap.Width;
-            int mapY = (int)(tileIndex / tilemap.Width);
+            var mapX = tileIndex % tilemap.Width;
+            var mapY = (int)(tileIndex / tilemap.Width);
             
             // Extract flip/rotation flags
-            bool flippedHorizontally = (gid & FLIPPED_HORIZONTALLY_FLAG) != 0;
-            bool flippedVertically = (gid & FLIPPED_VERTICALLY_FLAG) != 0;
-            bool flippedDiagonally = (gid & FLIPPED_DIAGONALLY_FLAG) != 0;
+            var flippedHorizontally = (gid & FlippedHorizontallyFlag) != 0;
+            var flippedVertically = (gid & FlippedVerticallyFlag) != 0;
+            var flippedDiagonally = (gid & FlippedDiagonallyFlag) != 0;
             
             // Clear the flip/rotation flags to get the actual tile ID
-            uint actualGid = gid & TILE_ID_MASK;
+            var actualGid = gid & TileIdMask;
             
             // Calculate local tile ID within the tileset
-            uint localTileId = actualGid - firstGid;
+            var localTileId = actualGid - firstGid;
             
             // Get the tile definition if it's animated
             var animatedTileDefinition = tileset.Tiles?.FirstOrDefault(t => (uint)t.Id == localTileId);
             uint tileIdToDrawFromSheet;
             
-            if (animatedTileDefinition?.Animation != null && animatedTileDefinition.Animation.Frames.Any())
+            if (animatedTileDefinition?.Animation != null && animatedTileDefinition.Animation.Frames.Count != 0)
             {
                 // Calculate which frame of the animation to show at the current time
-                int animationDuration = animatedTileDefinition.Animation.Frames.Sum(f => f.Duration);
-                int timeInAnimation = currentTime % animationDuration;
+                var animationDuration = animatedTileDefinition.Animation.Frames.Sum(f => f.Duration);
+                var timeInAnimation = currentTime % animationDuration;
                 
                 // Find the current frame
-                int accumulatedDuration = 0;
+                var accumulatedDuration = 0;
                 var currentFrame = animatedTileDefinition.Animation.Frames.First();
                 
                 foreach (var animationFrame in animatedTileDefinition.Animation.Frames)
@@ -218,30 +212,30 @@ public class AnimationGeneratorService : IAnimationGeneratorService
             }
             
             // Calculate the position of the tile in the tileset image
-            int tilesetColumns = tileset.Columns;
-            int tileX = (int)(tileIdToDrawFromSheet % tilesetColumns) * tileset.TileWidth;
-            int tileY = (int)(tileIdToDrawFromSheet / tilesetColumns) * tileset.TileHeight;
+            var tilesetColumns = tileset.Columns;
+            var tileX = (int)(tileIdToDrawFromSheet % tilesetColumns) * tileset.TileWidth;
+            var tileY = (int)(tileIdToDrawFromSheet / tilesetColumns) * tileset.TileHeight;
             
             // Extract the tile from the tileset
             var sourceRect = new Rectangle(tileX, tileY, tileset.TileWidth, tileset.TileHeight);
-            var tileImage = _tilesetImageService.GetTileBitmap(tilesetImage, sourceRect);
+            var tileImage = await Task.Run(() => _tilesetImageService.GetTileBitmap(tilesetImage, sourceRect));
             
             // Apply any transformations
             if (flippedHorizontally || flippedVertically || flippedDiagonally)
             {
-                tileImage = _tilesetImageService.ApplyTileTransformations(tileImage, flippedHorizontally, flippedVertically, flippedDiagonally);
+                tileImage = await Task.Run(() => _tilesetImageService.ApplyTileTransformations(tileImage, flippedHorizontally, flippedVertically, flippedDiagonally));
             }
             
             // Calculate the destination position in the frame
-            int destX = mapX * tilemap.TileWidth;
-            int destY = mapY * tilemap.TileHeight;
+            var destX = mapX * tilemap.TileWidth;
+            var destY = mapY * tilemap.TileHeight;
             
             // Draw the tile onto the frame, preserving transparency
-            frame.Mutate(ctx => 
+            await Task.Run(() => frame.Mutate(ctx => 
             {
                 // Use PixelBlenderMode.Normal to ensure proper alpha blending
                 ctx.DrawImage(tileImage, new Point(destX, destY), 1f);
-            });
+            }));
             
             // Dispose of the temporary tile image
             tileImage.Dispose();
@@ -257,7 +251,7 @@ public class AnimationGeneratorService : IAnimationGeneratorService
     {
         while (b != 0)
         {
-            int temp = b;
+            var temp = b;
             b = a % b;
             a = temp;
         }
