@@ -1,4 +1,3 @@
-using System.CommandLine;
 using Tilemap2Animation.CommandLineOptions;
 
 namespace Tilemap2Animation.Test.CommandLineOptions;
@@ -32,4 +31,4 @@ public class InputFileOptionTests
         // Assert
         Assert.True(_sut.Option.IsRequired);
     }
-} 
+}

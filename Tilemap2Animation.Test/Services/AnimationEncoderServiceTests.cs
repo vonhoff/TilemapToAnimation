@@ -1,9 +1,6 @@
-using Moq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.IO;
 using Tilemap2Animation.Services;
-using Tilemap2Animation.Services.Contracts;
 
 namespace Tilemap2Animation.Test.Services;
 

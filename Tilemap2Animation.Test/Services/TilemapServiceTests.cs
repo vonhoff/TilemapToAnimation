@@ -1,9 +1,7 @@
-using Moq;
-using System.Text;
+using System.IO.Compression;
 using System.Xml.Serialization;
 using Tilemap2Animation.Entities;
 using Tilemap2Animation.Services;
-using Tilemap2Animation.Services.Contracts;
 
 namespace Tilemap2Animation.Test.Services;
 
@@ -72,7 +70,7 @@ public class TilemapServiceTests : IDisposable
         byte[] compressedData;
         using (var memoryStream = new MemoryStream())
         {
-            using (var gzipStream = new System.IO.Compression.GZipStream(memoryStream, System.IO.Compression.CompressionMode.Compress))
+            using (var gzipStream = new GZipStream(memoryStream, CompressionMode.Compress))
             {
                 gzipStream.Write(originalData, 0, originalData.Length);
             }
@@ -110,7 +108,7 @@ public class TilemapServiceTests : IDisposable
         byte[] deflatedData;
         using (var memoryStream = new MemoryStream())
         {
-            using (var deflateStream = new System.IO.Compression.DeflateStream(memoryStream, System.IO.Compression.CompressionMode.Compress, true))
+            using (var deflateStream = new DeflateStream(memoryStream, CompressionMode.Compress, true))
             {
                 deflateStream.Write(originalData, 0, originalData.Length);
             }

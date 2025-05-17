@@ -1,9 +1,6 @@
-using Moq;
-using System.IO;
 using System.Xml.Serialization;
 using Tilemap2Animation.Entities;
 using Tilemap2Animation.Services;
-using Tilemap2Animation.Services.Contracts;
 
 namespace Tilemap2Animation.Test.Services;
 

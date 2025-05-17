@@ -1,7 +1,6 @@
 using Moq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using System.IO;
 using Tilemap2Animation.Entities;
 using Tilemap2Animation.Services.Contracts;
 using Tilemap2Animation.Workflows;
