@@ -41,12 +41,25 @@ public class MainWorkflow
 
             var inputFile = Path.GetFullPath(options.InputFile);
             var extension = Path.GetExtension(inputFile).ToLowerInvariant();
+            var fileName = Path.GetFileName(inputFile);
+            var supportedExtensions = new[] { ".tmx", ".tsx", ".png", ".jpg", ".jpeg", ".bmp" };
 
             string? tmxInputFile = null;
             string? tsxInputFile = null;
             string? imageInputFile = null;
 
-            switch (extension)
+            // Find the last supported extension in the filename
+            var lastSupportedExtension = supportedExtensions
+                .Where(ext => fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(ext => fileName.LastIndexOf(ext, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
+
+            if (lastSupportedExtension == null)
+            {
+                throw new ArgumentException($"Unsupported input file type. File must end with one of: {string.Join(", ", supportedExtensions)}");
+            }
+
+            switch (lastSupportedExtension)
             {
                 case ".tmx":
                     tmxInputFile = inputFile;
@@ -60,8 +73,6 @@ public class MainWorkflow
                 case ".bmp":
                     imageInputFile = inputFile;
                     break;
-                default:
-                    throw new ArgumentException($"Unsupported input file type: {extension}");
             }
 
             Tilemap? tilemap = null;

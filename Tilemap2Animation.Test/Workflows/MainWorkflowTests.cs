@@ -491,4 +491,106 @@ public class MainWorkflowTests
         // Updated error message to match actual implementation
         Assert.Contains("No tilesets could be loaded for the conversion", exception.Message);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WithMultipleExtensions_ProcessesCorrectly()
+    {
+        // Arrange
+        var testFilePath = Path.Combine(Path.GetTempPath(), "test.gif.tmx");
+        var outputPath = Path.Combine(Path.GetTempPath(), "output.gif");
+        
+        var options = new MainWorkflowOptions
+        {
+            InputFile = testFilePath,
+            OutputFile = outputPath,
+            FrameDelay = 100
+        };
+        
+        var tilemap = new Tilemap
+        {
+            Width = 10,
+            Height = 10,
+            TileWidth = 16,
+            TileHeight = 16,
+            Layers = new List<TilemapLayer>
+            {
+                new TilemapLayer
+                {
+                    Name = "Layer1", 
+                    Data = new TilemapLayerData { Encoding = "csv", Text = "1,2,3,4" }
+                }
+            },
+            Tilesets = new List<TilemapTileset>
+            {
+                new TilemapTileset { FirstGid = 1, Source = "test.tsx" }
+            }
+        };
+        
+        var tileset = new Tileset
+        {
+            Image = new TilesetImage { Path = "test.png" }
+        };
+        
+        var layerData = new List<uint> { 1, 2, 3, 4 };
+        var tilesetImage = new Image<Rgba32>(32, 32);
+        var frames = new List<Image<Rgba32>> { new Image<Rgba32>(16, 16) };
+        var delays = new List<int> { 100 };
+        
+        _tilemapServiceMock.Setup(x => x.DeserializeTmxAsync(testFilePath)).ReturnsAsync(tilemap);
+        _tilemapServiceMock.Setup(x => x.ParseLayerData(It.IsAny<TilemapLayer>())).Returns(layerData);
+        _tilesetServiceMock.Setup(x => x.DeserializeTsxAsync(It.IsAny<string>())).ReturnsAsync(tileset);
+        _tilesetServiceMock.Setup(x => x.ResolveTilesetImagePath(It.IsAny<string>(), It.IsAny<string>())).Returns("test.png");
+        _tilesetImageServiceMock.Setup(x => x.LoadTilesetImageAsync(It.IsAny<string>())).ReturnsAsync(tilesetImage);
+        _tilesetImageServiceMock.Setup(x => x.ProcessTransparency(It.IsAny<Image<Rgba32>>(), It.IsAny<Tileset>())).Returns(tilesetImage);
+        _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
+            It.IsAny<Tilemap>(),
+            It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
+            It.IsAny<Dictionary<string, List<uint>>>(),
+            It.IsAny<int>()))
+            .ReturnsAsync((frames, delays));
+
+        try
+        {
+            // Act
+            await _sut.ExecuteAsync(options);
+            
+            // Assert
+            _tilemapServiceMock.Verify(x => x.DeserializeTmxAsync(testFilePath), Times.Once);
+            _animationEncoderServiceMock.Verify(x => x.SaveAsGifAsync(
+                It.IsAny<List<Image<Rgba32>>>(), 
+                It.IsAny<List<int>>(), 
+                It.Is<string>(s => s == outputPath)), 
+                Times.Once);
+        }
+        finally
+        {
+            tilesetImage.Dispose();
+            foreach (var frame in frames)
+            {
+                frame.Dispose();
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithUnsupportedExtension_ThrowsArgumentException()
+    {
+        // Arrange
+        var testFilePath = Path.Combine(Path.GetTempPath(), "test.xyz");
+        var outputPath = Path.Combine(Path.GetTempPath(), "output.gif");
+        
+        var options = new MainWorkflowOptions
+        {
+            InputFile = testFilePath,
+            OutputFile = outputPath,
+            FrameDelay = 100
+        };
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() => _sut.ExecuteAsync(options));
+        Assert.Contains("Unsupported input file type", exception.Message);
+        Assert.Contains(".tmx", exception.Message);
+        Assert.Contains(".tsx", exception.Message);
+        Assert.Contains(".png", exception.Message);
+    }
 } 
