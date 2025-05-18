@@ -206,13 +206,22 @@ public class MainWorkflowTests
 
         var tileset = new Tileset
         {
+            Name = "test tileset",
+            TileWidth = 16,
+            TileHeight = 16,
             Image = new TilesetImage { Path = "test.png" }
         };
+        
+        var dummyLayerData = new List<uint> { 0 };
+        var frames = new List<Image<Rgba32>> { new Image<Rgba32>(16, 16) };
+        var delays = new List<int> { 100 };
 
         _tilemapServiceMock.Setup(x => x.FindTmxFilesReferencingTsxAsync(tsxFilePath))
-            .ReturnsAsync(new List<string>()); // No TMX files found
+            .ReturnsAsync(new List<string>());
+        
         _tilemapServiceMock.Setup(x => x.ParseLayerData(It.IsAny<TilemapLayer>()))
-            .Returns(new List<uint> { 0 }); // For dummy layer
+            .Returns(dummyLayerData);
+            
         _tilesetServiceMock.Setup(x => x.DeserializeTsxAsync(tsxFilePath)).ReturnsAsync(tileset);
         _tilesetServiceMock.Setup(x => x.ResolveTilesetImagePath(It.IsAny<string>(), It.IsAny<string>())).Returns("test.png");
         
@@ -220,19 +229,34 @@ public class MainWorkflowTests
         _tilesetImageServiceMock.Setup(x => x.LoadTilesetImageAsync(It.IsAny<string>())).ReturnsAsync(tilesetImage);
         _tilesetImageServiceMock.Setup(x => x.ProcessTransparency(It.IsAny<Image<Rgba32>>(), It.IsAny<Tileset>())).Returns(tilesetImage);
 
+        _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
+            It.IsAny<Tilemap>(),
+            It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
+            It.IsAny<Dictionary<string, List<uint>>>()))
+            .ReturnsAsync((frames, delays));
+
         try
         {
-            // Act & Assert
-            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.ExecuteAsync(options));
-            Assert.Contains("No valid tilesets with images are available to generate animation frames", exception.Message);
+            // Act
+            await _sut.ExecuteAsync(options);
             
-            // Verify
+            // Assert
+            _animationEncoderServiceMock.Verify(x => x.SaveAsGifAsync(
+                frames, 
+                delays, 
+                It.Is<string>(s => s == outputPath)), 
+                Times.Once);
+            
             _tilemapServiceMock.Verify(x => x.FindTmxFilesReferencingTsxAsync(tsxFilePath), Times.Once);
             _tilesetServiceMock.Verify(x => x.DeserializeTsxAsync(tsxFilePath), Times.Once);
         }
         finally
         {
             tilesetImage.Dispose();
+            foreach (var frame in frames)
+            {
+                frame.Dispose();
+            }
         }
     }
 
@@ -338,21 +362,61 @@ public class MainWorkflowTests
 
         var tileset = new Tileset
         {
+            Name = "test tileset",
+            TileWidth = 16,
+            TileHeight = 16,
             Image = new TilesetImage { Path = "test.png" }
         };
+        
+        var dummyLayerData = new List<uint> { 0 };
+        var frames = new List<Image<Rgba32>> { new Image<Rgba32>(16, 16) };
+        var delays = new List<int> { 100 };
 
         _tilesetServiceMock.Setup(x => x.FindTsxFilesReferencingImageAsync(imageFilePath))
             .ReturnsAsync(new List<string> { tsxFilePath });
         _tilemapServiceMock.Setup(x => x.FindTmxFilesReferencingTsxAsync(tsxFilePath))
-            .ReturnsAsync(new List<string>()); // No TMX files found
-        _tilesetServiceMock.Setup(x => x.DeserializeTsxAsync(It.IsAny<string>())).ReturnsAsync(tileset);
+            .ReturnsAsync(new List<string>());
+        
+        _tilesetServiceMock.Setup(x => x.DeserializeTsxAsync(tsxFilePath)).ReturnsAsync(tileset);
+        _tilesetServiceMock.Setup(x => x.ResolveTilesetImagePath(It.IsAny<string>(), It.IsAny<string>())).Returns("test.png");
 
-        // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.ExecuteAsync(options));
+        var tilesetImage = new Image<Rgba32>(32, 32);
+        _tilesetImageServiceMock.Setup(x => x.LoadTilesetImageAsync(It.IsAny<string>())).ReturnsAsync(tilesetImage);
+        _tilesetImageServiceMock.Setup(x => x.ProcessTransparency(It.IsAny<Image<Rgba32>>(), It.IsAny<Tileset>())).Returns(tilesetImage);
+        
+        _tilemapServiceMock.Setup(x => x.ParseLayerData(It.IsAny<TilemapLayer>()))
+            .Returns(dummyLayerData);
 
-        // Verify
-        _tilesetServiceMock.Verify(x => x.FindTsxFilesReferencingImageAsync(imageFilePath), Times.Once);
-        _tilemapServiceMock.Verify(x => x.FindTmxFilesReferencingTsxAsync(tsxFilePath), Times.Once);
+        _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
+            It.IsAny<Tilemap>(),
+            It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
+            It.IsAny<Dictionary<string, List<uint>>>()))
+            .ReturnsAsync((frames, delays));
+
+        try
+        {
+            // Act
+            await _sut.ExecuteAsync(options);
+            
+            // Assert
+            _animationEncoderServiceMock.Verify(x => x.SaveAsGifAsync(
+                frames, 
+                delays, 
+                It.Is<string>(s => s == outputPath)), 
+                Times.Once);
+
+            _tilesetServiceMock.Verify(x => x.FindTsxFilesReferencingImageAsync(imageFilePath), Times.Once);
+            _tilemapServiceMock.Verify(x => x.FindTmxFilesReferencingTsxAsync(tsxFilePath), Times.Once);
+            _tilesetServiceMock.Verify(x => x.DeserializeTsxAsync(tsxFilePath), Times.Once);
+        }
+        finally
+        {
+            tilesetImage.Dispose();
+            foreach (var frame in frames)
+            {
+                frame.Dispose();
+            }
+        }
     }
 
     [Fact]
@@ -369,7 +433,7 @@ public class MainWorkflowTests
         };
 
         _tilesetServiceMock.Setup(x => x.FindTsxFilesReferencingImageAsync(imageFilePath))
-            .ReturnsAsync(new List<string>()); // No TSX files found
+            .ReturnsAsync(new List<string>());
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.ExecuteAsync(options));
@@ -398,7 +462,7 @@ public class MainWorkflowTests
             Height = 10,
             TileWidth = 16,
             TileHeight = 16,
-            Layers = new List<TilemapLayer>(), // Empty layers
+            Layers = new List<TilemapLayer>(),
             Tilesets = new List<TilemapTileset>
             {
                 new TilemapTileset { FirstGid = 1, Source = "test.tsx" }
