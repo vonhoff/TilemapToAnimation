@@ -249,28 +249,48 @@ public class MainWorkflow
 
             // 5. Generate animation frames
             Log.Information("Generating animation frames...");
-            var tilesetInfoForGenerator = tilemap.Tilesets
-                .Select(ts =>
-                {
-                    var tsxPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(resolvedTmxFilePath)!, ts.Source ?? ""));
-                    tilesets.TryGetValue(tsxPath, out var loadedTileset);
-                    tilesetImages.TryGetValue(tsxPath, out var loadedTilesetImage);
-                    return (ts.FirstGid, Tileset: loadedTileset, TilesetImage: loadedTilesetImage);
-                })
-                .Where(t => t.Tileset != null && t.TilesetImage != null)
-                .ToList();
 
-            if (!tilesetInfoForGenerator.Any())
+            var tilesetEntriesForGenerator = new List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>();
+            var tmxDir = Path.GetDirectoryName(resolvedTmxFilePath) ?? ".";
+
+            foreach (var entry in tilemap.Tilesets)
             {
-                throw new InvalidOperationException("No valid tilesets with images are available to generate animation frames.");
+                if (string.IsNullOrEmpty(entry.Source)) continue;
+                var tsxFullPath = Path.GetFullPath(Path.Combine(tmxDir, entry.Source)); 
+                if (tilesets.TryGetValue(tsxFullPath, out var ts) && tilesetImages.TryGetValue(tsxFullPath, out var img))
+                {
+                    tilesetEntriesForGenerator.Add((entry.FirstGid, ts, img));
+                }
+                else
+                {
+                    Log.Warning("Tileset source {TilesetSource} from TMX not found in loaded tilesets. FirstGid: {FirstGid}", entry.Source, entry.FirstGid);
+                }
             }
-
+            
+            if (tilesetEntriesForGenerator.Count == 0 && tilesets.Count > 0)
+            {
+                // This can happen if TMX has no tileset entries but we loaded a single TSX.
+                // Attempt to add the single loaded TSX if it's the case.
+                if (tilesets.Count == 1 && tilesetImages.Count == 1)
+                {
+                    var singleTsx = tilesets.First();
+                    var singleImg = tilesetImages.First();
+                    // Find a suitable FirstGid, default to 1 if TMX had no tilesets.
+                    var firstGid = tilemap.Tilesets.FirstOrDefault()?.FirstGid ?? 1;
+                    tilesetEntriesForGenerator.Add((firstGid, singleTsx.Value, singleImg.Value));
+                    Log.Information("Added single loaded tileset to generator as TMX had no explicit entries.");
+                }
+                else
+                {
+                    Log.Error("No valid tileset entries could be prepared for the animation generator, but tilesets were loaded. Check TMX tileset references.");
+                    throw new InvalidOperationException("Could not prepare tileset entries for animation generator.");
+                }
+            }
 
             var (frames, delays) = await _animationGeneratorService.GenerateAnimationFramesFromMultipleTilesetsAsync(
                 tilemap,
-                tilesetInfoForGenerator,
-                layerDataByName,
-                options.FrameDelay);
+                tilesetEntriesForGenerator,
+                layerDataByName);
 
             // Determine output file path
             var outputFilePath = options.OutputFile ?? Path.ChangeExtension(inputFile, ".gif");

@@ -12,6 +12,7 @@ public class AnimationGeneratorServiceTests
     private readonly Mock<ITilesetImageService> _tilesetImageServiceMock;
     private readonly Mock<ITilemapService> _tilemapServiceMock;
     private readonly AnimationGeneratorService _sut;
+    private const int DefaultAnimationDuration = 100; // Mirrored from AnimationGeneratorService
 
     public AnimationGeneratorServiceTests()
     {
@@ -58,13 +59,12 @@ public class AnimationGeneratorServiceTests
                 }
             }
         };
-        var frameDelay = 50; // ms
 
         // Act
-        var result = _sut.CalculateTotalAnimationDuration(tileset, frameDelay);
+        var result = _sut.CalculateTotalAnimationDuration(tileset);
 
         // Assert
-        Assert.Equal(900, result); // The actual LCM of 300 and 450, with frameDelay 50
+        Assert.Equal(900, result); // LCM(300, 450) = 900
     }
     
     [Fact]
@@ -119,15 +119,13 @@ public class AnimationGeneratorServiceTests
             (1001, tileset2, tilesetImage2)
         };
         
-        var frameDelay = 50; // ms
-
         try
         {
             // Act
-            var result = _sut.CalculateTotalAnimationDurationForMultipleTilesets(tilesets, frameDelay);
+            var result = _sut.CalculateTotalAnimationDurationForMultipleTilesets(tilesets);
 
             // Assert
-            Assert.Equal(900, result); // The actual LCM of 300 and 450, with frameDelay 50
+            Assert.Equal(900, result); // LCM(300, 450) = 900
         }
         finally
         {
@@ -152,15 +150,13 @@ public class AnimationGeneratorServiceTests
             (1, tileset, tilesetImage)
         };
         
-        var frameDelay = 50; // ms
-
         try
         {
             // Act
-            var result = _sut.CalculateTotalAnimationDurationForMultipleTilesets(tilesets, frameDelay);
+            var result = _sut.CalculateTotalAnimationDurationForMultipleTilesets(tilesets);
 
             // Assert
-            Assert.Equal(frameDelay, result); // Should just return the frame delay when no animations exist
+            Assert.Equal(DefaultAnimationDuration, result); // Should return default duration
         }
         finally
         {
@@ -177,13 +173,11 @@ public class AnimationGeneratorServiceTests
             Tiles = new List<TilesetTile>() // No animated tiles
         };
         
-        var frameDelay = 50; // ms
-
         // Act
-        var result = _sut.CalculateTotalAnimationDuration(tileset, frameDelay);
+        var result = _sut.CalculateTotalAnimationDuration(tileset);
 
         // Assert
-        Assert.Equal(frameDelay, result); // Should just return the frame delay when no animations exist
+        Assert.Equal(DefaultAnimationDuration, result); // Should return default duration
     }
     
     [Fact]
@@ -241,13 +235,12 @@ public class AnimationGeneratorServiceTests
         var (frames, delays) = await _sut.GenerateAnimationFramesFromMultipleTilesetsAsync(
             tilemap,
             tilesets,
-            layerDataByName,
-            100); // frameDelay
+            layerDataByName);
             
         // Assert
-        Assert.Single(frames); // Should have created one frame
+        Assert.Single(frames); // Should have created one frame (static image case)
         Assert.Single(delays); // Should have one delay value
-        Assert.Equal(100, delays[0]); // Delay should match what we provided
+        Assert.Equal(DefaultAnimationDuration, delays[0]); // Delay should be default duration
         
         // Clean up
         foreach (var frame in frames)

@@ -42,8 +42,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = testFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
         
         var tilemap = new Tilemap
@@ -85,8 +84,7 @@ public class MainWorkflowTests
         _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
             It.IsAny<Tilemap>(),
             It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
-            It.IsAny<Dictionary<string, List<uint>>>(),
-            It.IsAny<int>()))
+            It.IsAny<Dictionary<string, List<uint>>>()))
             .ReturnsAsync((frames, delays));
 
         try
@@ -122,8 +120,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = tsxFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
 
         var tilemap = new Tilemap
@@ -167,8 +164,7 @@ public class MainWorkflowTests
         _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
             It.IsAny<Tilemap>(),
             It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
-            It.IsAny<Dictionary<string, List<uint>>>(),
-            It.IsAny<int>()))
+            It.IsAny<Dictionary<string, List<uint>>>()))
             .ReturnsAsync((frames, delays));
 
         try
@@ -205,8 +201,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = tsxFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
 
         var tileset = new Tileset
@@ -253,8 +248,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = imageFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
 
         var tilemap = new Tilemap
@@ -300,8 +294,7 @@ public class MainWorkflowTests
         _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
             It.IsAny<Tilemap>(),
             It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
-            It.IsAny<Dictionary<string, List<uint>>>(),
-            It.IsAny<int>()))
+            It.IsAny<Dictionary<string, List<uint>>>()))
             .ReturnsAsync((frames, delays));
 
         try
@@ -340,8 +333,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = imageFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
 
         var tileset = new Tileset
@@ -373,8 +365,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = imageFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
 
         _tilesetServiceMock.Setup(x => x.FindTsxFilesReferencingImageAsync(imageFilePath))
@@ -398,8 +389,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = testFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
         
         var tilemap = new Tilemap
@@ -450,8 +440,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = testFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
         
         var tilemap = new Tilemap
@@ -502,8 +491,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = testFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
         
         var tilemap = new Tilemap
@@ -545,8 +533,7 @@ public class MainWorkflowTests
         _animationGeneratorServiceMock.Setup(x => x.GenerateAnimationFramesFromMultipleTilesetsAsync(
             It.IsAny<Tilemap>(),
             It.IsAny<List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)>>(),
-            It.IsAny<Dictionary<string, List<uint>>>(),
-            It.IsAny<int>()))
+            It.IsAny<Dictionary<string, List<uint>>>()))
             .ReturnsAsync((frames, delays));
 
         try
@@ -582,8 +569,7 @@ public class MainWorkflowTests
         var options = new MainWorkflowOptions
         {
             InputFile = testFilePath,
-            OutputFile = outputPath,
-            FrameDelay = 100
+            OutputFile = outputPath
         };
 
         // Act & Assert

@@ -6,7 +6,5 @@ public class MainWorkflowOptions
     
     public string? OutputFile { get; init; }
     
-    public int FrameDelay { get; init; } = 100;
-    
     public bool Verbose { get; init; }
 } 

@@ -18,6 +18,8 @@ public class AnimationGeneratorService : IAnimationGeneratorService
     private const uint FlippedVerticallyFlag = 0x40000000;
     private const uint FlippedDiagonallyFlag = 0x20000000;
     private const uint TileIdMask = ~(FlippedHorizontallyFlag | FlippedVerticallyFlag | FlippedDiagonallyFlag);
+    private const int DefaultAnimationDuration = 100; // Default duration in ms if no animations
+    private const int MinimumFrameDuration = 10; // Minimum duration for a frame in ms to avoid issues with 0ms delays
     
     public AnimationGeneratorService(ITilesetImageService tilesetImageService, ITilemapService tilemapService)
     {
@@ -25,30 +27,30 @@ public class AnimationGeneratorService : IAnimationGeneratorService
         _tilemapService = tilemapService;
     }
 
-    public int CalculateTotalAnimationDuration(Tileset tileset, int frameDelay)
+    public int CalculateTotalAnimationDuration(Tileset tileset)
     {
         ArgumentNullException.ThrowIfNull(tileset);
-        if (frameDelay <= 0) throw new ArgumentException("Frame delay must be greater than 0.", nameof(frameDelay));
         
         try
         {
-            // Find all animated tiles
             var animatedTiles = tileset.Tiles?.Where(t => t.Animation?.Frames != null && t.Animation.Frames.Count != 0) ?? Enumerable.Empty<TilesetTile>();
+            var animationCycleDurations = animatedTiles
+                .Select(tile => tile.Animation!.Frames.Sum(f => f.Duration))
+                .Where(duration => duration > 0) // Only consider positive durations
+                .ToList();
 
-            var tilesetTiles = animatedTiles.ToList();
-            if (tilesetTiles.Count == 0)
+            if (animationCycleDurations.Count == 0)
             {
-                // If no animated tiles, return frame delay as total duration
-                return frameDelay;
+                return DefaultAnimationDuration; // Return default if no positive-duration animations
             }
             
-            // Calculate the least common multiple of all animation durations
-            return tilesetTiles.Select(tile => tile.Animation!.Frames.Sum(f => f.Duration)).Aggregate(frameDelay, LeastCommonMultiple);
+            // Calculate the least common multiple of all positive animation durations
+            return animationCycleDurations.Aggregate(LeastCommonMultiple);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error calculating total animation duration");
-            throw new InvalidOperationException($"Error calculating total animation duration: {ex.Message}", ex);
+            Log.Error(ex, "Error calculating total animation duration for a single tileset");
+            throw new InvalidOperationException($"Error calculating total animation duration for a single tileset: {ex.Message}", ex);
         }
     }
 
@@ -71,15 +73,12 @@ public class AnimationGeneratorService : IAnimationGeneratorService
     public async Task<(List<Image<Rgba32>> Frames, List<int> Delays)> GenerateAnimationFramesFromMultipleTilesetsAsync(
         Tilemap tilemap,
         List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets,
-        Dictionary<string, List<uint>> layerDataByName,
-        int frameDelay)
+        Dictionary<string, List<uint>> layerDataByName)
     {
         ArgumentNullException.ThrowIfNull(tilemap);
         ArgumentNullException.ThrowIfNull(tilesets);
         ArgumentNullException.ThrowIfNull(layerDataByName);
-        if (frameDelay <= 0) throw new ArgumentException("Frame delay must be greater than 0.", nameof(frameDelay));
         
-        // Filter out any invalid tilesets
         var validTilesets = tilesets.Where(t => t.Tileset != null && t.TilesetImage != null).ToList();
         
         if (validTilesets.Count == 0)
@@ -89,57 +88,110 @@ public class AnimationGeneratorService : IAnimationGeneratorService
         
         try
         {
-            // Calculate total animation duration across all tilesets
-            var totalDuration = CalculateTotalAnimationDurationForMultipleTilesets(validTilesets, frameDelay);
+            var totalDuration = CalculateTotalAnimationDurationForMultipleTilesets(validTilesets);
             
-            // Create a list to store all frames
             var frames = new List<Image<Rgba32>>();
             var delays = new List<int>();
-            
-            // Create frames for each time step
-            for (var time = 0; time < totalDuration; time += frameDelay)
+
+            // If totalDuration is the default, it means no actual animations are present or all have 0 duration.
+            // Create a single static frame.
+            if (totalDuration == DefaultAnimationDuration)
             {
-                // Create a new frame
-                var frame = new Image<Rgba32>(tilemap.Width * tilemap.TileWidth, tilemap.Height * tilemap.TileHeight);
-                
-                // Apply background color if specified
-                if (!string.IsNullOrEmpty(tilemap.BackgroundColor))
-                {
-                    try
-                    {
-                        var bgColor = Rgba32.ParseHex(tilemap.BackgroundColor);
-                        frame.Mutate(ctx => ctx.Fill(bgColor));
-                        Log.Debug("Applied background color: {TilemapBackgroundColor}", tilemap.BackgroundColor);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Warning(ex, "Failed to parse background color: {TilemapBackgroundColor}", tilemap.BackgroundColor);
-                    }
-                }
-                
-                // In Tiled, layers are drawn from bottom to top
-                // The first layer in the collection is the bottommost layer
-                // So we iterate through layers in the same order they appear in the TMX file
-                foreach (var layer in tilemap.Layers)
-                {
-                    Log.Debug("Processing layer: {LayerName}", layer.Name);
-                    if (layerDataByName.TryGetValue(layer.Name ?? "", out var currentLayerData))
-                    {
-                        // Draw tiles onto the frame for this layer using multiple tilesets
-                        await DrawTilesOnFrameWithMultipleTilesetsAsync(frame, tilemap, validTilesets, currentLayerData, time);
-                    }
-                    else
-                    {
-                        // If we have no parsed data for this layer, parse it now
-                        var parsedLayerData = _tilemapService.ParseLayerData(layer);
-                        await DrawTilesOnFrameWithMultipleTilesetsAsync(frame, tilemap, validTilesets, parsedLayerData, time);
-                    }
-                }
-                
-                frames.Add(frame);
-                delays.Add(frameDelay);
+                var staticFrame = await RenderFrameAtTimeAsync(tilemap, validTilesets, layerDataByName, 0);
+                frames.Add(staticFrame);
+                delays.Add(DefaultAnimationDuration);
+                return (frames, delays);
             }
             
+            // Collect all event times (times when any tile changes its animation frame)
+            var eventTimes = new SortedSet<int> { 0 }; // Start with 0
+
+            foreach (var layer in tilemap.Layers)
+            {
+                if (!layerDataByName.TryGetValue(layer.Name ?? "", out var currentLayerData))
+                {
+                    currentLayerData = _tilemapService.ParseLayerData(layer);
+                }
+
+                for (var tileIndex = 0; tileIndex < currentLayerData.Count; tileIndex++)
+                {
+                    var gid = currentLayerData[tileIndex];
+                    if (gid == 0) continue;
+
+                    var actualGid = gid & TileIdMask;
+                    var (firstGid, tilesetDef, _) = GetTilesetForGid(actualGid, validTilesets);
+
+                    if (tilesetDef == null) continue;
+
+                    var localTileId = (int)(actualGid - firstGid);
+                    var animatedTileDefinition = tilesetDef.Tiles?.FirstOrDefault(t => t.Id == localTileId);
+
+                    if (animatedTileDefinition?.Animation != null && animatedTileDefinition.Animation.Frames.Count > 0)
+                    {
+                        var tileAnimationFrames = animatedTileDefinition.Animation.Frames;
+                        var tileCycleDuration = tileAnimationFrames.Sum(f => f.Duration);
+
+                        if (tileCycleDuration > 0)
+                        {
+                            for (var cycleStartTime = 0; cycleStartTime < totalDuration; cycleStartTime += tileCycleDuration)
+                            {
+                                var accumulatedDurationInCycle = 0;
+                                foreach (var animFrame in tileAnimationFrames)
+                                {
+                                    var eventTime = cycleStartTime + accumulatedDurationInCycle;
+                                    if (eventTime < totalDuration) // Only add event times within the total duration
+                                    {
+                                        eventTimes.Add(eventTime);
+                                    }
+                                    accumulatedDurationInCycle += animFrame.Duration;
+                                    // If the frame duration is 0, it means it shows indefinitely until next change or cycle end.
+                                    // We only need one event time at the start of this frame.
+                                    if (animFrame.Duration == 0) break; 
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            eventTimes.Add(totalDuration); // Ensure the animation concludes at totalDuration
+            var sortedEventTimes = eventTimes.ToList();
+
+            for (var i = 0; i < sortedEventTimes.Count -1; i++)
+            {
+                var currentTime = sortedEventTimes[i];
+                var nextTime = sortedEventTimes[i+1];
+                var frameDuration = nextTime - currentTime;
+
+                if (frameDuration <= 0) // Skip if duration is zero or negative (should not happen with SortedSet logic)
+                {
+                    // If it happens, it might mean multiple animation changes at the exact same millisecond.
+                    // We only need one frame for that instant.
+                    continue; 
+                }
+
+                var frame = await RenderFrameAtTimeAsync(tilemap, validTilesets, layerDataByName, currentTime);
+                frames.Add(frame);
+                delays.Add(Math.Max(MinimumFrameDuration, frameDuration)); // Ensure a minimum frame duration
+            }
+            
+            // If, after processing, no frames were added (e.g. totalDuration was very small or event times were problematic)
+            // ensure at least one frame is present to avoid empty animation errors.
+            if (frames.Count == 0 && totalDuration > 0)
+            {
+                 Log.Warning("No frames generated despite positive totalDuration ({TotalDuration}ms). Adding a single frame.", totalDuration);
+                 var fallbackFrame = await RenderFrameAtTimeAsync(tilemap, validTilesets, layerDataByName, 0);
+                 frames.Add(fallbackFrame);
+                 delays.Add(Math.Max(MinimumFrameDuration, totalDuration));
+            }
+            else if (frames.Count == 0 && totalDuration == 0) // Should be caught by DefaultAnimationDuration case, but as safety
+            {
+                Log.Warning("Total animation duration is 0 and no frames generated. Adding a single default frame.");
+                var fallbackFrame = await RenderFrameAtTimeAsync(tilemap, validTilesets, layerDataByName, 0);
+                frames.Add(fallbackFrame);
+                delays.Add(DefaultAnimationDuration);
+            }
+
             return (frames, delays);
         }
         catch (Exception ex)
@@ -148,42 +200,96 @@ public class AnimationGeneratorService : IAnimationGeneratorService
             throw new InvalidOperationException($"Error generating animation frames with multiple tilesets: {ex.Message}", ex);
         }
     }
+
+    private async Task<Image<Rgba32>> RenderFrameAtTimeAsync(
+        Tilemap tilemap,
+        List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> validTilesets,
+        Dictionary<string, List<uint>> layerDataByName,
+        int time)
+    {
+        var frame = new Image<Rgba32>(tilemap.Width * tilemap.TileWidth, tilemap.Height * tilemap.TileHeight);
+        if (!string.IsNullOrEmpty(tilemap.BackgroundColor))
+        {
+            try
+            {
+                var bgColor = Rgba32.ParseHex(tilemap.BackgroundColor);
+                frame.Mutate(ctx => ctx.Fill(bgColor));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to parse background color: {TilemapBackgroundColor}", tilemap.BackgroundColor);
+            }
+        }
+
+        foreach (var layer in tilemap.Layers)
+        {
+            if (layerDataByName.TryGetValue(layer.Name ?? "", out var currentLayerData))
+            {
+                await DrawTilesOnFrameWithMultipleTilesetsAsync(frame, tilemap, validTilesets, currentLayerData, time);
+            }
+            else
+            {
+                var parsedLayerData = _tilemapService.ParseLayerData(layer);
+                await DrawTilesOnFrameWithMultipleTilesetsAsync(frame, tilemap, validTilesets, parsedLayerData, time);
+            }
+        }
+        return frame;
+    }
+
+    private (int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage) GetTilesetForGid(uint actualGid, List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets)
+    {
+        // Assumes tilesets are pre-sorted by FirstGid descending or this method sorts/finds appropriately.
+        // For simplicity, using the existing sorted list approach from DrawTilesOnFrameWithMultipleTilesetsAsync requires it to be passed or sorted here.
+        // The original DrawTilesOnFrameWithMultipleTilesetsAsync sorts them. Let's reuse that or ensure sorted list.
+        // For now, let's assume `tilesets` parameter is the `validTilesets` which should be used carefully or pre-sorted as needed.
+        // This is a simplified version for event time calculation; the actual drawing method has more robust tileset finding.
+        
+        var sortedTilesets = tilesets.OrderByDescending(t => t.FirstGid).ToList(); // Ensure sorted for correct selection
+        foreach (var tilesetInfo in sortedTilesets)
+        {
+            if (actualGid >= tilesetInfo.FirstGid && tilesetInfo.Tileset != null)
+            {
+                return tilesetInfo;
+            }
+        }
+        return (0, null, null);
+    }
     
     public int CalculateTotalAnimationDurationForMultipleTilesets(
-        List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets, 
-        int frameDelay)
+        List<(int FirstGid, Tileset? Tileset, Image<Rgba32>? TilesetImage)> tilesets)
     {
         ArgumentNullException.ThrowIfNull(tilesets);
-        if (frameDelay <= 0) throw new ArgumentException("Frame delay must be greater than 0.", nameof(frameDelay));
         
         try
         {
-            // Get all animated tiles from all tilesets
-            var animationDurations = new List<int>();
+            var allAnimationCycleDurations = new List<int>();
             
             foreach (var (_, tileset, _) in tilesets)
             {
                 if (tileset == null) continue;
                 
-                // Find all animated tiles in this tileset
                 var animatedTiles = tileset.Tiles?.Where(t => t.Animation?.Frames != null && t.Animation.Frames.Count != 0) ?? Enumerable.Empty<TilesetTile>();
                 
-                var tilesetTiles = animatedTiles.ToList();
-                if (tilesetTiles.Count > 0)
-                {
-                    // Add all animation durations from this tileset
-                    animationDurations.AddRange(tilesetTiles.Select(tile => tile.Animation!.Frames.Sum(f => f.Duration)));
-                }
+                allAnimationCycleDurations.AddRange(animatedTiles
+                    .Select(tile => tile.Animation!.Frames.Sum(f => f.Duration))
+                    .Where(duration => duration > 0)); // Only consider positive durations
             }
             
-            // If no animated tiles found in any tileset, return frame delay as total duration
-            if (animationDurations.Count == 0)
+            if (allAnimationCycleDurations.Count == 0)
             {
-                return frameDelay;
+                return DefaultAnimationDuration; // Return default if no positive-duration animations
             }
             
-            // Calculate the least common multiple of all animation durations
-            return animationDurations.Aggregate(frameDelay, LeastCommonMultiple);
+            // Remove duplicates before LCM calculation to avoid unnecessary computation,
+            // though LCM itself would handle duplicates correctly.
+            var distinctPositiveDurations = allAnimationCycleDurations.Distinct().ToList();
+
+            if (distinctPositiveDurations.Count == 0) // Should be covered by allAnimationCycleDurations.Count == 0, but for safety
+            {
+                return DefaultAnimationDuration;
+            }
+
+            return distinctPositiveDurations.Aggregate(LeastCommonMultiple);
         }
         catch (Exception ex)
         {

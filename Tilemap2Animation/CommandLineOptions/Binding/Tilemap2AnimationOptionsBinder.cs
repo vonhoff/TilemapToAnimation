@@ -12,7 +12,6 @@ public class Tilemap2AnimationOptionsBinder : BinderBase<MainWorkflowOptions>
 {
     private readonly Option<string> _inputFileOption;
     private readonly Option<string?> _outputFileOption;
-    private readonly Option<int> _frameDelayOption;
     private readonly Option<bool> _verboseOption;
 
     /// <summary>
@@ -21,13 +20,11 @@ public class Tilemap2AnimationOptionsBinder : BinderBase<MainWorkflowOptions>
     /// <param name="rootCommand">The root command to bind options to</param>
     /// <param name="inputFileOption">The input file option</param>
     /// <param name="outputFileOption">The output file option</param>
-    /// <param name="frameDelayOption">The frame delay option</param>
     /// <param name="verboseOption">The verbose option</param>
     public Tilemap2AnimationOptionsBinder(
         Command rootCommand,
         ICommandLineOption<string> inputFileOption,
         ICommandLineOption<string?> outputFileOption,
-        ICommandLineOption<int> frameDelayOption,
         ICommandLineOption<bool> verboseOption)
     {
         _inputFileOption = inputFileOption.Option;
@@ -35,9 +32,6 @@ public class Tilemap2AnimationOptionsBinder : BinderBase<MainWorkflowOptions>
         
         _outputFileOption = outputFileOption.Option;
         rootCommand.AddOption(_outputFileOption);
-        
-        _frameDelayOption = frameDelayOption.Option;
-        rootCommand.AddOption(_frameDelayOption);
         
         _verboseOption = verboseOption.Option;
         rootCommand.AddOption(_verboseOption);
@@ -54,7 +48,6 @@ public class Tilemap2AnimationOptionsBinder : BinderBase<MainWorkflowOptions>
         {
             InputFile = bindingContext.ParseResult.GetValueForOption(_inputFileOption)!,
             OutputFile = bindingContext.ParseResult.GetValueForOption(_outputFileOption),
-            FrameDelay = bindingContext.ParseResult.GetValueForOption(_frameDelayOption),
             Verbose = bindingContext.ParseResult.GetValueForOption(_verboseOption)
         };
     }

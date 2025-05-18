@@ -48,14 +48,12 @@ public static class Program
     {
         var inputFileOption = new InputFileOption();
         var outputFileOption = new OutputFileOption();
-        var frameDelayOption = new FrameDelayOption();
         var verboseOption = new VerboseOption();
 
         return new Tilemap2AnimationOptionsBinder(
             rootCommand,
             inputFileOption,
             outputFileOption,
-            frameDelayOption,
             verboseOption);
     }
 } 
