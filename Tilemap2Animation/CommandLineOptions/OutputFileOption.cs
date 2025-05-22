@@ -5,16 +5,22 @@ namespace Tilemap2Animation.CommandLineOptions;
 
 public class OutputFileOption : ICommandLineOption<string?>
 {
-    public Option<string?> Option { get; }
-
     public OutputFileOption()
     {
         Option = new Option<string?>(
-            name: "--output",
-            description: "The path for the output animation file. If not specified, derives from input filename.")
+            "--output",
+            "The path for the output animation file. If not specified, derives from input filename.")
         {
             IsRequired = false
         };
         Option.AddAlias("-o");
     }
-} 
+
+    public Option<string?> Option { get; }
+
+    public Option<string?> Register(Command command)
+    {
+        command.Add(Option);
+        return Option;
+    }
+}

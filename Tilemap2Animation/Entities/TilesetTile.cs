@@ -4,9 +4,7 @@ namespace Tilemap2Animation.Entities;
 
 public class TilesetTile
 {
-    [XmlAttribute("id")]
-    public int Id { get; set; }
+    [XmlAttribute("id")] public int Id { get; set; }
 
-    [XmlElement("animation")]
-    public TilesetTileAnimation? Animation { get; set; }
+    [XmlElement("animation")] public TilesetTileAnimation? Animation { get; set; }
 }

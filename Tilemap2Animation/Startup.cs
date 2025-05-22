@@ -21,16 +21,15 @@ public class Startup
         var services = new ServiceCollection();
         ConfigureLogging();
         ConfigureServices(services);
-        
+
         var serviceProvider = services.BuildServiceProvider();
         return serviceProvider.GetRequiredService<MainWorkflow>();
     }
 
     private void ConfigureLogging()
     {
-        var logLevel = _workflowOptions.Verbose ? LogEventLevel.Verbose : LogEventLevel.Information;
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Is(logLevel)
+            .MinimumLevel.Is(LogEventLevel.Information)
             .WriteTo.Console()
             .CreateLogger();
     }
@@ -44,4 +43,4 @@ public class Startup
         services.AddSingleton<IAnimationEncoderService, AnimationEncoderService>();
         services.AddSingleton<MainWorkflow>();
     }
-} 
+}

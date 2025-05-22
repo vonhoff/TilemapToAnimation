@@ -22,7 +22,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Tilemap2Animation\Tilemap2Animation.csproj" />
+        <ProjectReference Include="..\Tilemap2Animation\Tilemap2Animation.csproj"/>
     </ItemGroup>
 
 </Project>

@@ -16,7 +16,13 @@ public class TilesetImageServiceTests : IDisposable
         _tempDirectory = Path.Combine(Path.GetTempPath(), "TilesetImageServiceTests_" + Guid.NewGuid());
         Directory.CreateDirectory(_tempDirectory);
     }
-    
+
+    public void Dispose()
+    {
+        // Clean up the temporary directory
+        if (Directory.Exists(_tempDirectory)) Directory.Delete(_tempDirectory, true);
+    }
+
     [Fact]
     public async Task LoadTilesetImageAsync_WithValidFile_ReturnsImage()
     {
@@ -39,13 +45,10 @@ public class TilesetImageServiceTests : IDisposable
         }
         finally
         {
-            if (File.Exists(testImagePath))
-            {
-                File.Delete(testImagePath);
-            }
+            if (File.Exists(testImagePath)) File.Delete(testImagePath);
         }
     }
-    
+
     [Fact]
     public async Task LoadTilesetImageAsync_WithNonExistentFile_ThrowsFileNotFoundException()
     {
@@ -55,7 +58,7 @@ public class TilesetImageServiceTests : IDisposable
         // Act & Assert
         await Assert.ThrowsAsync<FileNotFoundException>(() => _sut.LoadTilesetImageAsync(nonExistentPath));
     }
-    
+
     [Fact]
     public async Task LoadTilesetImageAsync_WithInvalidImage_ThrowsInvalidOperationException()
     {
@@ -70,33 +73,27 @@ public class TilesetImageServiceTests : IDisposable
         }
         finally
         {
-            if (File.Exists(invalidImagePath))
-            {
-                File.Delete(invalidImagePath);
-            }
+            if (File.Exists(invalidImagePath)) File.Delete(invalidImagePath);
         }
     }
-    
+
     [Fact]
     public void ProcessTransparency_WithTransparencyColor_MakesPixelsTransparent()
     {
         // Arrange
         using var tilesetImage = new Image<Rgba32>(32, 32);
-        
+
         // Fill image with a specific color that will be made transparent
         var transColor = new Rgba32(255, 0, 255); // Magenta
         tilesetImage.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < accessor.Height; y++)
+            for (var y = 0; y < accessor.Height; y++)
             {
                 var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x++)
-                {
-                    row[x] = transColor;
-                }
+                for (var x = 0; x < row.Length; x++) row[x] = transColor;
             }
         });
-        
+
         var tileset = new Tileset
         {
             Image = new TilesetImage
@@ -111,18 +108,16 @@ public class TilesetImageServiceTests : IDisposable
         // Assert
         result.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < accessor.Height; y++)
+            for (var y = 0; y < accessor.Height; y++)
             {
                 var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x++)
-                {
+                for (var x = 0; x < row.Length; x++)
                     // Check that all pixels are now transparent
                     Assert.Equal(0, row[x].A);
-                }
             }
         });
     }
-    
+
     [Fact]
     public void ProcessTransparency_WithNoTransparencyColor_ReturnsOriginalImage()
     {
@@ -142,7 +137,7 @@ public class TilesetImageServiceTests : IDisposable
         // Assert
         Assert.Same(tilesetImage, result); // Should return the original image
     }
-    
+
     [Fact]
     public void ProcessTransparency_WithInvalidTransparencyColor_ReturnsOriginalImage()
     {
@@ -177,7 +172,7 @@ public class TilesetImageServiceTests : IDisposable
         Assert.Equal(16, result.Width);
         Assert.Equal(16, result.Height);
     }
-    
+
     [Fact]
     public void GetTileBitmap_WithSourceRectOutsideBounds_ReturnsAdjustedImage()
     {
@@ -189,10 +184,10 @@ public class TilesetImageServiceTests : IDisposable
         using var result = _sut.GetTileBitmap(tilesetImage, sourceRect);
 
         // Assert
-        Assert.Equal(12, result.Width);  // Should be adjusted to fit (32 - 20 = 12)
+        Assert.Equal(12, result.Width); // Should be adjusted to fit (32 - 20 = 12)
         Assert.Equal(12, result.Height); // Should be adjusted to fit (32 - 20 = 12)
     }
-    
+
     [Fact]
     public void GetTileBitmap_WithSourceRectCompletelyOutsideBounds_ReturnsEmptyImage()
     {
@@ -204,19 +199,16 @@ public class TilesetImageServiceTests : IDisposable
         using var result = _sut.GetTileBitmap(tilesetImage, sourceRect);
 
         // Assert
-        Assert.Equal(10, result.Width);  // Should return an empty image with requested dimensions
+        Assert.Equal(10, result.Width); // Should return an empty image with requested dimensions
         Assert.Equal(10, result.Height);
-        
+
         // Check that the image is transparent (all pixels have alpha = 0)
         result.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < accessor.Height; y++)
+            for (var y = 0; y < accessor.Height; y++)
             {
                 var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x++)
-                {
-                    Assert.Equal(0, row[x].A);
-                }
+                for (var x = 0; x < row.Length; x++) Assert.Equal(0, row[x].A);
             }
         });
     }
@@ -228,10 +220,10 @@ public class TilesetImageServiceTests : IDisposable
         using var tileImage = new Image<Rgba32>(16, 16);
         // Create an asymmetric pattern to test flipping
         tileImage[0, 0] = new Rgba32(255, 0, 0);
-        
+
         // Act
         using var result = _sut.ApplyTileTransformations(tileImage, true, false, false);
-        
+
         // Assert
         Assert.Equal(tileImage[0, 0], result[15, 0]); // Pixel should be mirrored horizontally
     }
@@ -243,122 +235,105 @@ public class TilesetImageServiceTests : IDisposable
         using var tileImage = new Image<Rgba32>(16, 16);
         // Create an asymmetric pattern to test flipping
         tileImage[0, 0] = new Rgba32(255, 0, 0);
-        
+
         // Act
         using var result = _sut.ApplyTileTransformations(tileImage, false, true, false);
-        
+
         // Assert
         Assert.Equal(tileImage[0, 0], result[0, 15]); // Pixel should be mirrored vertically
     }
-    
+
     [Fact]
     public void ApplyTileTransformations_FlippedDiagonally_TransformsImage()
     {
         // Arrange
         using var tileImage = new Image<Rgba32>(16, 16);
-        
+
         // Create a distinctive pattern that will change with diagonal flip
         // Red in top-left, green in top-right, blue in bottom-left
-        tileImage[0, 0] = new Rgba32(255, 0, 0);      // Red
-        tileImage[15, 0] = new Rgba32(0, 255, 0);     // Green
-        tileImage[0, 15] = new Rgba32(0, 0, 255);     // Blue
-        
+        tileImage[0, 0] = new Rgba32(255, 0, 0); // Red
+        tileImage[15, 0] = new Rgba32(0, 255, 0); // Green
+        tileImage[0, 15] = new Rgba32(0, 0, 255); // Blue
+
         // Act
         using var result = _sut.ApplyTileTransformations(tileImage, false, false, true);
-        
+
         // Assert
         Assert.Equal(16, result.Width);
         Assert.Equal(16, result.Height);
-        
+
         // Verify that the pattern has changed due to transformation
         // At least one of the color positions should be different
-        bool patternChanged = false;
-        
+        var patternChanged = false;
+
         if (!ColorEquals(tileImage[0, 0], result[0, 0]) ||
             !ColorEquals(tileImage[15, 0], result[15, 0]) ||
             !ColorEquals(tileImage[0, 15], result[0, 15]))
-        {
             patternChanged = true;
-        }
-        
+
         Assert.True(patternChanged, "The pattern should change after diagonal flip");
-        
+
         // Verify all colors are still present in the image
         Assert.True(ContainsColor(result, 255, 0, 0), "Red should be present after transformation");
         Assert.True(ContainsColor(result, 0, 255, 0), "Green should be present after transformation");
         Assert.True(ContainsColor(result, 0, 0, 255), "Blue should be present after transformation");
     }
-    
+
     // Helper methods for color comparisons
     private bool ColorEquals(Rgba32 a, Rgba32 b)
     {
         return a.R == b.R && a.G == b.G && a.B == b.B && a.A == b.A;
     }
-    
+
     private bool ContainsColor(Image<Rgba32> image, byte r, byte g, byte b)
     {
-        bool found = false;
+        var found = false;
         image.ProcessPixelRows(accessor =>
         {
-            for (int y = 0; y < accessor.Height && !found; y++)
+            for (var y = 0; y < accessor.Height && !found; y++)
             {
                 var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length && !found; x++)
-                {
+                for (var x = 0; x < row.Length && !found; x++)
                     if (row[x].R == r && row[x].G == g && row[x].B == b)
-                    {
                         found = true;
-                    }
-                }
             }
         });
         return found;
     }
-    
+
     [Fact]
     public void ApplyTileTransformations_AllFlips_TransformsImage()
     {
         // Arrange
         using var tileImage = new Image<Rgba32>(16, 16);
-        
+
         // Create a distinctive pattern that will change with transformations
         // Red in top-left, green in top-right, blue in bottom-left
-        tileImage[0, 0] = new Rgba32(255, 0, 0);      // Red
-        tileImage[15, 0] = new Rgba32(0, 255, 0);     // Green
-        tileImage[0, 15] = new Rgba32(0, 0, 255);     // Blue
-        
+        tileImage[0, 0] = new Rgba32(255, 0, 0); // Red
+        tileImage[15, 0] = new Rgba32(0, 255, 0); // Green
+        tileImage[0, 15] = new Rgba32(0, 0, 255); // Blue
+
         // Act
         using var result = _sut.ApplyTileTransformations(tileImage, true, true, true);
-        
+
         // Assert
         Assert.Equal(16, result.Width);
         Assert.Equal(16, result.Height);
-        
+
         // Verify that the pattern has changed due to transformation
         // At least one of the color positions should be different
-        bool patternChanged = false;
-        
+        var patternChanged = false;
+
         if (!ColorEquals(tileImage[0, 0], result[0, 0]) ||
             !ColorEquals(tileImage[15, 0], result[15, 0]) ||
             !ColorEquals(tileImage[0, 15], result[0, 15]))
-        {
             patternChanged = true;
-        }
-        
+
         Assert.True(patternChanged, "The pattern should change after all flips");
-        
+
         // Verify all colors are still present in the image
         Assert.True(ContainsColor(result, 255, 0, 0), "Red should be present after transformation");
         Assert.True(ContainsColor(result, 0, 255, 0), "Green should be present after transformation");
         Assert.True(ContainsColor(result, 0, 0, 255), "Blue should be present after transformation");
     }
-    
-    public void Dispose()
-    {
-        // Clean up the temporary directory
-        if (Directory.Exists(_tempDirectory))
-        {
-            Directory.Delete(_tempDirectory, true);
-        }
-    }
-} 
+}

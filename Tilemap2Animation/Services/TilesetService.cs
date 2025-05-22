@@ -9,28 +9,20 @@ public class TilesetService : ITilesetService
 {
     public async Task<Tileset> DeserializeTsxAsync(string tsxFilePath)
     {
-        if (!File.Exists(tsxFilePath))
-        {
-            throw new FileNotFoundException($"TSX file not found: {tsxFilePath}");
-        }
-        
+        if (!File.Exists(tsxFilePath)) throw new FileNotFoundException($"TSX file not found: {tsxFilePath}");
+
         try
         {
             await using var fileStream = new FileStream(tsxFilePath, FileMode.Open, FileAccess.Read);
             var serializer = new XmlSerializer(typeof(Tileset));
             var tileset = await Task.Run(() => (Tileset?)serializer.Deserialize(fileStream));
-            
-            if (tileset == null)
-            {
-                throw new InvalidOperationException("Failed to deserialize TSX file.");
-            }
-            
+
+            if (tileset == null) throw new InvalidOperationException("Failed to deserialize TSX file.");
+
             // Resolve the image path relative to the TSX file
             if (tileset.Image != null && !string.IsNullOrEmpty(tileset.Image.Path))
-            {
                 tileset.Image.Path = ResolveTilesetImagePath(tsxFilePath, tileset.Image.Path);
-            }
-            
+
             return tileset;
         }
         catch (Exception ex)
@@ -43,9 +35,7 @@ public class TilesetService : ITilesetService
     public async Task<List<string>> FindTsxFilesReferencingImageAsync(string imageFilePath)
     {
         if (string.IsNullOrEmpty(imageFilePath))
-        {
             throw new ArgumentException("Image file path cannot be null or empty.", nameof(imageFilePath));
-        }
 
         try
         {
@@ -54,10 +44,10 @@ public class TilesetService : ITilesetService
             var tsxFiles = new List<string>();
 
             // Search for TSX files in the directory and its subdirectories
-            var tsxFilesInDirectory = await Task.Run(() => Directory.GetFiles(directory, "*.tsx", SearchOption.AllDirectories));
-            
+            var tsxFilesInDirectory =
+                await Task.Run(() => Directory.GetFiles(directory, "*.tsx", SearchOption.AllDirectories));
+
             foreach (var tsxFile in tsxFilesInDirectory)
-            {
                 try
                 {
                     await using var fileStream = new FileStream(tsxFile, FileMode.Open, FileAccess.Read);
@@ -67,17 +57,14 @@ public class TilesetService : ITilesetService
                     if (tileset?.Image != null && !string.IsNullOrEmpty(tileset.Image.Path))
                     {
                         var tilesetImagePath = ResolveTilesetImagePath(tsxFile, tileset.Image.Path);
-                        if (Path.GetFileName(tilesetImagePath).Equals(imageFileName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            tsxFiles.Add(tsxFile);
-                        }
+                        if (Path.GetFileName(tilesetImagePath)
+                            .Equals(imageFileName, StringComparison.OrdinalIgnoreCase)) tsxFiles.Add(tsxFile);
                     }
                 }
                 catch (Exception ex)
                 {
                     Log.Warning(ex, "Error reading TSX file: {TsxFile}", tsxFile);
                 }
-            }
 
             return tsxFiles;
         }
@@ -91,16 +78,11 @@ public class TilesetService : ITilesetService
     public string ResolveTilesetImagePath(string tsxFilePath, string imagePath)
     {
         if (string.IsNullOrEmpty(imagePath))
-        {
             throw new ArgumentException("Image path cannot be null or empty.", nameof(imagePath));
-        }
-        
-        if (Path.IsPathRooted(imagePath))
-        {
-            return imagePath;
-        }
-        
+
+        if (Path.IsPathRooted(imagePath)) return imagePath;
+
         var tsxDirectory = Path.GetDirectoryName(tsxFilePath)!;
         return Path.GetFullPath(Path.Combine(tsxDirectory, imagePath));
     }
-} 
+}

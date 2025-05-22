@@ -44,18 +44,16 @@ public static class Program
         await parser.InvokeAsync(args);
     }
 
-    private static Tilemap2AnimationOptionsBinder BuildMainWorkflowOptionsBinder(Command rootCommand)
+    private static ApplicationOptionsBinder BuildMainWorkflowOptionsBinder(Command rootCommand)
     {
         var inputFileOption = new InputFileOption();
         var outputFileOption = new OutputFileOption();
-        var frameDelayOption = new FrameDelayOption();
-        var verboseOption = new VerboseOption();
+        var frameDelayOption = new FpsOption();
 
-        return new Tilemap2AnimationOptionsBinder(
+        return new ApplicationOptionsBinder(
             rootCommand,
             inputFileOption,
             outputFileOption,
-            frameDelayOption,
-            verboseOption);
+            frameDelayOption);
     }
-} 
+}

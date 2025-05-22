@@ -17,6 +17,12 @@ public class TilemapServiceTests : IDisposable
         Directory.CreateDirectory(_tempDirectory);
     }
 
+    public void Dispose()
+    {
+        // Clean up the temporary directory
+        if (Directory.Exists(_tempDirectory)) Directory.Delete(_tempDirectory, true);
+    }
+
     [Fact]
     public void ParseLayerData_WithValidLayer_ReturnsCorrectData()
     {
@@ -65,7 +71,7 @@ public class TilemapServiceTests : IDisposable
         // Arrange
         // Prepare test data: 1, 2, 3 in little endian format
         var originalData = new byte[] { 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0 };
-        
+
         // Compress with GZip
         byte[] compressedData;
         using (var memoryStream = new MemoryStream())
@@ -74,9 +80,10 @@ public class TilemapServiceTests : IDisposable
             {
                 gzipStream.Write(originalData, 0, originalData.Length);
             }
+
             compressedData = memoryStream.ToArray();
         }
-        
+
         var base64Value = Convert.ToBase64String(compressedData);
         var layer = new TilemapLayer
         {
@@ -94,7 +101,7 @@ public class TilemapServiceTests : IDisposable
         // Assert
         Assert.Equal(new List<uint> { 1, 2, 3 }, result);
     }
-    
+
     [Fact]
     public void ParseLayerData_WithBase64ZlibEncodedData_ReturnsCorrectData()
     {
@@ -103,7 +110,7 @@ public class TilemapServiceTests : IDisposable
         // followed by the equivalent of Deflate compression of the data
         // For test purposes, we'll create a simplified version
         var originalData = new byte[] { 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0 };
-        
+
         // Create a deflate stream without the ZLib header
         byte[] deflatedData;
         using (var memoryStream = new MemoryStream())
@@ -112,15 +119,16 @@ public class TilemapServiceTests : IDisposable
             {
                 deflateStream.Write(originalData, 0, originalData.Length);
             }
+
             deflatedData = memoryStream.ToArray();
         }
-        
+
         // Add ZLib header (78 9C) to the deflated data
         var zlibData = new byte[deflatedData.Length + 2];
         zlibData[0] = 0x78; // Standard ZLib header first byte
         zlibData[1] = 0x9C; // Standard ZLib header second byte
         Array.Copy(deflatedData, 0, zlibData, 2, deflatedData.Length);
-        
+
         var base64Value = Convert.ToBase64String(zlibData);
         var layer = new TilemapLayer
         {
@@ -138,7 +146,7 @@ public class TilemapServiceTests : IDisposable
         // Assert
         Assert.Equal(3, result.Count);
     }
-    
+
     [Fact]
     public void ParseLayerData_WithUnsupportedCompression_ThrowsInvalidOperationException()
     {
@@ -157,7 +165,7 @@ public class TilemapServiceTests : IDisposable
         var exception = Assert.Throws<InvalidOperationException>(() => _sut.ParseLayerData(layer));
         Assert.Contains("Unsupported compression format", exception.Message);
     }
-    
+
     [Fact]
     public void ParseLayerData_WithNullLayer_ThrowsInvalidOperationException()
     {
@@ -183,7 +191,7 @@ public class TilemapServiceTests : IDisposable
         var exception = Assert.Throws<InvalidOperationException>(() => _sut.ParseLayerData(layer));
         Assert.Contains("Unsupported layer data encoding", exception.Message);
     }
-    
+
     [Fact]
     public async Task DeserializeTmxAsync_WithValidTmxFile_ReturnsTilemap()
     {
@@ -196,7 +204,7 @@ public class TilemapServiceTests : IDisposable
             TileHeight = 16,
             Layers = new List<TilemapLayer>
             {
-                new TilemapLayer
+                new()
                 {
                     Name = "Layer1",
                     Data = new TilemapLayerData { Encoding = "csv", Text = "1,2,3,4" }
@@ -204,13 +212,13 @@ public class TilemapServiceTests : IDisposable
             },
             Tilesets = new List<TilemapTileset>
             {
-                new TilemapTileset { FirstGid = 1, Source = "test.tsx" }
+                new() { FirstGid = 1, Source = "test.tsx" }
             }
         };
-        
+
         var tmxFilePath = Path.Combine(_tempDirectory, "test.tmx");
         var serializer = new XmlSerializer(typeof(Tilemap));
-        
+
         using (var writer = new StreamWriter(tmxFilePath))
         {
             serializer.Serialize(writer, tilemap);
@@ -236,13 +244,10 @@ public class TilemapServiceTests : IDisposable
         finally
         {
             // Clean up
-            if (File.Exists(tmxFilePath))
-            {
-                File.Delete(tmxFilePath);
-            }
+            if (File.Exists(tmxFilePath)) File.Delete(tmxFilePath);
         }
     }
-    
+
     [Fact]
     public async Task DeserializeTmxAsync_WithNonExistentFile_ThrowsFileNotFoundException()
     {
@@ -250,27 +255,28 @@ public class TilemapServiceTests : IDisposable
         var nonExistentPath = Path.Combine(_tempDirectory, "non_existent.tmx");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<FileNotFoundException>(() => _sut.DeserializeTmxAsync(nonExistentPath));
+        var exception =
+            await Assert.ThrowsAsync<FileNotFoundException>(() => _sut.DeserializeTmxAsync(nonExistentPath));
         Assert.Contains("TMX file not found", exception.Message);
     }
-    
+
     [Fact]
     public async Task FindTmxFilesReferencingTsxAsync_WithValidReferences_ReturnsMatchingFiles()
     {
         // Arrange
         var tsxFileName = "test.tsx";
         var tsxFilePath = Path.Combine(_tempDirectory, tsxFileName);
-        
+
         // Create a dummy TSX file
         File.WriteAllText(tsxFilePath, "<tileset/>");
-        
+
         // Create TMX files that reference the TSX
         var tmxWithRef1 = CreateTmxWithTsxReference(_tempDirectory, "with_ref1.tmx", tsxFileName);
         var tmxWithRef2 = CreateTmxWithTsxReference(_tempDirectory, "with_ref2.tmx", tsxFileName);
-        
+
         // Create a TMX file that doesn't reference the TSX
         var tmxWithoutRef = CreateTmxWithTsxReference(_tempDirectory, "without_ref.tmx", "other.tsx");
-        
+
         try
         {
             // Act
@@ -289,21 +295,21 @@ public class TilemapServiceTests : IDisposable
             CleanupTestFiles(new[] { tsxFilePath, tmxWithRef1, tmxWithRef2, tmxWithoutRef });
         }
     }
-    
+
     [Fact]
     public async Task FindTmxFilesReferencingTsxAsync_WithNoReferences_ReturnsEmptyList()
     {
         // Arrange
         var tsxFileName = "lonely.tsx";
         var tsxFilePath = Path.Combine(_tempDirectory, tsxFileName);
-        
+
         // Create a dummy TSX file
         File.WriteAllText(tsxFilePath, "<tileset/>");
-        
+
         // Create TMX files that don't reference the TSX
         var tmxWithoutRef1 = CreateTmxWithTsxReference(_tempDirectory, "without_ref1.tmx", "other.tsx");
         var tmxWithoutRef2 = CreateTmxWithTsxReference(_tempDirectory, "without_ref2.tmx", "another.tsx");
-        
+
         try
         {
             // Act
@@ -319,7 +325,7 @@ public class TilemapServiceTests : IDisposable
             CleanupTestFiles(new[] { tsxFilePath, tmxWithoutRef1, tmxWithoutRef2 });
         }
     }
-    
+
     [Fact]
     public async Task FindTmxFilesReferencingTsxAsync_WithEmptyPath_ThrowsArgumentException()
     {
@@ -327,7 +333,7 @@ public class TilemapServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => _sut.FindTmxFilesReferencingTsxAsync(""));
         Assert.Contains("TSX file path cannot be null or empty", exception.Message);
     }
-    
+
     private string CreateTmxWithTsxReference(string directory, string tmxFileName, string tsxFileName)
     {
         var tilemap = new Tilemap
@@ -338,7 +344,7 @@ public class TilemapServiceTests : IDisposable
             TileHeight = 16,
             Layers = new List<TilemapLayer>
             {
-                new TilemapLayer
+                new()
                 {
                     Name = "Layer1",
                     Data = new TilemapLayerData { Encoding = "csv", Text = "1,2,3,4" }
@@ -346,38 +352,25 @@ public class TilemapServiceTests : IDisposable
             },
             Tilesets = new List<TilemapTileset>
             {
-                new TilemapTileset { FirstGid = 1, Source = tsxFileName }
+                new() { FirstGid = 1, Source = tsxFileName }
             }
         };
-        
+
         var tmxFilePath = Path.Combine(directory, tmxFileName);
         var serializer = new XmlSerializer(typeof(Tilemap));
-        
+
         using (var writer = new StreamWriter(tmxFilePath))
         {
             serializer.Serialize(writer, tilemap);
         }
-        
+
         return tmxFilePath;
     }
-    
+
     private void CleanupTestFiles(string[] filePaths)
     {
         foreach (var filePath in filePaths)
-        {
             if (File.Exists(filePath))
-            {
                 File.Delete(filePath);
-            }
-        }
     }
-    
-    public void Dispose()
-    {
-        // Clean up the temporary directory
-        if (Directory.Exists(_tempDirectory))
-        {
-            Directory.Delete(_tempDirectory, true);
-        }
-    }
-} 
+}
