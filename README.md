@@ -68,4 +68,4 @@ If you find value in this project, there are several ways you can contribute:
 
 ## License
 
-TilemapToAnimation is open-source software licensed under the [MIT License](LICENSE).
+Tilemap2Animation is open-source software licensed under the [MIT License](LICENSE).
