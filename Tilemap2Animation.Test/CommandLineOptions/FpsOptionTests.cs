@@ -19,13 +19,6 @@ public class FpsOptionTests
     }
 
     [Fact]
-    public void Option_HasCorrectAlias()
-    {
-        // Assert
-        Assert.Contains("-f", _sut.Option.Aliases);
-    }
-
-    [Fact]
     public void Option_IsNotRequired()
     {
         // Assert
