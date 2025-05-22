@@ -2,27 +2,27 @@ using Tilemap2Animation.CommandLineOptions;
 
 namespace Tilemap2Animation.Test.CommandLineOptions;
 
-public class FpsOptionTests
+public class FrameDelayOptionTests
 {
-    private readonly FpsOption _sut;
+    private readonly FrameDelayOption _sut;
 
-    public FpsOptionTests()
+    public FrameDelayOptionTests()
     {
-        _sut = new FpsOption();
+        _sut = new FrameDelayOption();
     }
 
     [Fact]
     public void Option_HasCorrectName()
     {
         // Assert
-        Assert.Equal("fps", _sut.Option.Name);
+        Assert.Equal("frame-delay", _sut.Option.Name);
     }
 
     [Fact]
     public void Option_HasCorrectAlias()
     {
         // Assert
-        Assert.Contains("-f", _sut.Option.Aliases);
+        Assert.Contains("-d", _sut.Option.Aliases);
     }
 
     [Fact]
