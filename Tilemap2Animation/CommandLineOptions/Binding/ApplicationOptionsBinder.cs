@@ -17,14 +17,9 @@ public class ApplicationOptionsBinder : BinderBase<MainWorkflowOptions>
         ICommandLineOption<string?> outputFileOption,
         ICommandLineOption<int> frameDelayOption)
     {
-        _inputFileOption = inputFileOption.Option;
-        rootCommand.AddOption(_inputFileOption);
-
-        _outputFileOption = outputFileOption.Option;
-        rootCommand.AddOption(_outputFileOption);
-
-        _frameDelayOption = frameDelayOption.Option;
-        rootCommand.AddOption(_frameDelayOption);
+        _inputFileOption = inputFileOption.Register(rootCommand);
+        _outputFileOption = outputFileOption.Register(rootCommand);
+        _frameDelayOption = frameDelayOption.Register(rootCommand);
     }
 
     protected override MainWorkflowOptions GetBoundValue(BindingContext bindingContext)
